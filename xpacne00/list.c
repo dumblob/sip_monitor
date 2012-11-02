@@ -8,77 +8,82 @@
 #include "common.h"
 #include "list.h"
 
-list_t *list_init(void)
+list_str_t *list_str_init(void)
 {
-  list_t *tmp;
-
-  if ((tmp = malloc(sizeof(list_t))) == NULL)
+  if ((list_str_t *tmp = malloc(sizeof(list_str_t))) == NULL)
     MALLOC_EXIT;
 
-  if ((*tmp->head = malloc(LIST_MIN_SIZE * sizeof(list_item_t *))) == NULL)
-    MALLOC_EXIT;
-
-  tmp->first_empty_place = 0;
-  tmp->size = 0;
-  tmp->allocated = LIST_MIN_SIZE;
+  tmp->head = NULL;
 
   return tmp;
 }
 
-void list_add(list_t *l, list_item_t *data)
+/* add to start; do not copy data */
+void list_str_add(list_str_t *l, char *d)
 {
   assert(l != NULL);
 
-  l->head[first_empty_place] = data;
-  l->first_empty_place++;
+  if ((list_str_item_t *tmp = malloc(sizeof(list_str_item_t))) == NULL)
+    MALLOC_EXIT;
 
-  if (l->first_empty_place)
+  tmp->data = d;
+  tmp->next = l->head;
 
-  /* puff up */
-  if (l->size == l->allocated)
+  l->head = tmp;
+}
+
+/* do not free data */
+void list_str_remove(list_str_t *l, char *d)
+{
+  assert(l != NULL);
+
+  list_str_item_t *tmp = l->head;
+  list_str_item_t *prev = NULL;
+
+  while (tmp != NULL)
   {
-    l->allocated = l->size + (l->size >> 2);
+    if (! strcmp(tmp->data, d))
+    {
+      if (prev == NULL)
+        l->head = tmp->next;
+      else
+        prev->next = tmp->next;
 
-    if ((*l->head = realloc(l->head,
-            l->allocated * sizeof(list_item_t *))) == NULL)
-      MALLOC_EXIT;
+      free(tmp);
+      return;
+    }
+
+    prev = tmp;
+    tmp = tmp->next;
+  }
+}
+
+list_str_item_t *list_str_item_present(list_str_t *l, char *d)
+{
+  assert(l != NULL);
+
+  list_str_item_t *tmp = l->head;
+
+  while (tmp != NULL)
+  {
+    if (! strcmp(tmp->data, d)) return tmp;
+
+    tmp = tmp->next;
   }
 
-  /* we know, we don't need to copy the data */
-  l->head[l->size] = data;
-
-  l->size++;
+  return NULL;
 }
 
-void list_remove(list_t *l, list_item_t *data)
+void list_str_dispose(list_str_t *l)
 {
   assert(l != NULL);
 
-  if (l->first_empty_place != NULL)
-    for (unsigned int i = 0; i <= l->size; ++i)
-      if (! strcmp(l->head[i], data)) return true;
+  while (l->head != NULL)
+  {
+    list_str_item_t *tmp = l->head->next;
+    free(l->head);
+    l->head = tmp;
+  }
 
-  if (l->first_empty_place)
-  return;
-}
-
-//FIXME list_item_present zmenit na list_map_stop_at_true
-bool list_map_stop_at_true(list_t *l,
-    (bool)(*cmp)(const list_item_t *, const list_item_t *),
-    list_item_t *data)
-{
-  assert(l != NULL);
-
-  for (unsigned int i = 0; i <= l->size; ++i)
-    if (l->head[i] != NULL && cmp(l->head[i], data)) return true;
-
-  return false;
-}
-
-void list_dispose(list_t *l)
-{
-  assert(l != NULL);
-
-  free(l->head);
   free(l);
 }

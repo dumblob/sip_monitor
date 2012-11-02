@@ -10,19 +10,19 @@
 
 #include <stdbool.h>
 
-typedef char list_item_t;
+typedef struct list_str_item_s {
+  char *data;
+  struct list_str_item_s *next;
+} list_str_item_t;
 
 typedef struct {
-  list_item_t **head;
-  unsigned int first_empty_place;  /* index */
-  unsigned int size;  /* index */
-  unsigned int allocated;  /* count */
-} list_t;
+  list_str_item_t *head;
+} list_str_t;
 
-list_t *list_init        ();
-void    list_add         (list_t *, list_item_t *);
-void    list_remove      (list_t *, list_item_t *);
-bool    list_item_present(list_t *, list_item_t *);
-void    list_dispose     (list_t *);
+list_str_t      *list_str_init        (void);
+void             list_str_add         (list_str_t *, char *);
+void             list_str_remove      (list_str_t *, char *);
+list_str_item_t *list_str_item_present(list_str_t *, char *);
+void             list_str_dispose     (list_str_t *);
 
 #endif
