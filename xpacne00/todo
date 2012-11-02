@@ -1,0 +1,11 @@
+RFC
+  ktere porty muze SIP pouzivat? (pridat parametr args.p???)
+  na ktere vrstve to vzdycky pracuje a ktere protokoly to pod sebou
+    pouziva?
+
+podpora IPv6
+sip pouziva utf-8 (RFC 2279)
+  message structure: line 1458
+  Content-Type je VZDY pritomno
+  if (pritomne Content-Encoding) { Content-Type je v tomto kodovani}
+  else {Content-Type NEni v zadnem kodovani}

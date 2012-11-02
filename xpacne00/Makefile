@@ -1,19 +1,19 @@
 # make [ | all | debug | doc | submit | clean ]
 
-HDR = main.h args.h list.h monitor.h
-SRC = main.c args.c list.c monitor.c
+HDR = common.h args.h list.h monitor.h
+SRC = args.c list.c monitor.c main.c
 EXE ?= sip_monitor
 SUB ?= xpacne00
 DOCNAME = manual
 CC ?= gcc
-CFLAGS ?= -std=c99 -W -Wall -Wextra -Werror -pedantic #-lm
+CFLAGS ?= -std=c99 -W -Wall -Wextra -Werror -pedantic -D_POSIX_C_SOURCE=200112L
 
 OBJ = $(SRC:.c=.o)
 
 all: $(EXE)
 
-debug: CFLAGS += -DDEBUG -g -ggdb3
-debug: CC += -DDEBUG -g
+debug: CFLAGS += -DDEBUG -g3
+debug: CC += -DDEBUG -g3
 debug: all
 
 $(EXE): $(OBJ)

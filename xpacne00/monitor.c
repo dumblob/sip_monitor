@@ -3,14 +3,21 @@
  * 2012-10-15 10:28:53 CEST
  */
 
-#include "monitor.c"
+#include <stdint.h>  /* HACK for pcap missing u_int u_short etc. */
+#define __USE_BSD    /*   needed under Linux                     */
+#include <pcap.h>
 
-{
-  fprintf(stderr, "ERR: %s \"%s\"\n", errbuf, args->i);
-  return EXIT_FAILURE;
-}
+#include <string.h>  /* memcpy */
+#include <arpa/inet.h>  /* ntohs */
+#include "common.h"
+#include "args.h"
+#include "monitor.h"
 
-// FIXME MALLOC_EXIT
+//FIXME
+//{
+//  fprintf(stderr, "ERR: %s \"%s\"\n", errbuf, args->i);
+//  return EXIT_FAILURE;
+//}
 
 // libpcap
 // prepnout do promiskuit
@@ -20,7 +27,7 @@
 //   pcap_dispatch() pcap_loop() pcap_next() cteni paketu
 //   sam musim analyzovat paket
 
-int start_sip_monitoring(args_s *args);
+int start_sip_monitoring(args_s *args)
 {
   char errbuf[PCAP_ERRBUF_SIZE];
   errbuf[0] = '\0';
@@ -64,37 +71,64 @@ int start_sip_monitoring(args_s *args);
     return EXIT_FAILURE;
   }
 
+  //FIXME man pcap-filter
   if (pcap_setfilter(handle, &filter))
   {
     fprintf(stderr, "ERR: %s \"%s\"\n", pcap_geterr(handle), args->i);
     return EXIT_FAILURE;
   }
 
-  //FIXME man pcap-filter
+  int ret = pcap_loop(handle, -1, handle_packet, (u_char *)NULL);
+  pcap_close(handle);
 
-  struct pcap_pkthdr *_header, header;
-  u_char *_data, *data;
-
-  if ((data = malloc(RING_BUF_SIZE)) == NULL) MALLOC_EXIT;
-
-  //FIXME sigset(term int hup); handler() { do_stop = true; }
-  unsigned char do_stop = 0;
-
-  while (! do_stop)
+  if (ret == -1)
   {
-    /* -2 read from file; -1 fail; 0 timeout expired; 1 OK */
-    if (pcap_next_ex(handle, &_header, &_data) == 1)
-    {
-      header.ts = _header->ts;
-      header.caplen = _header->caplen;  /* stored size */
-      header.len = _header->len;  /* real packet size (can be > than caplen) */
-      memcpy(data, _data, header->len);
-    }
+    fprintf(stderr, "ERR: %s \"%s\"\n", pcap_geterr(handle), args->i);
+    return EXIT_FAILURE;
+  }
+  else
+  {
+    return EXIT_SUCCESS;
+  }
+}
 
-    // net/ethernet.h ETHERTYPE_IPV6 ETHERTYPE_IP
-    ((struct ether_header *)data)->ether_type;
+void handle_packet(u_char *opts, const struct pcap_pkthdr *header,
+    const u_char *packet)
+{
+  // FIXME ntohl??? net/ethernet.h ETHERTYPE_IPV6 ETHERTYPE_IP
+  //ntohs(data->ether_type);
+
+  /* define ethernet header */
+  //ethernet = (struct sniff_ethernet *)packet;
+
+  /* IPv4 header offset */
+  ipv4_hdr_t *ip = (ipv4_hdr_t *)(packet + SIZE_ETHERNET);
+  int size_ip = (ip->verhdrlen & 0x0f) * 4;  /* (first 4 bits) * (4B period) */
+  int version_ip = ip->verhdrlen >> 4;  /* last 4 bits */
+
+  if (size_ip < 20)
+  {
+    printf("Invalid IP header length: %u bytes\n", size_ip);
+    return;
   }
 
-  pcap_close(handle);
-  return EXIT_SUCCESS;
+  switch (ip->protocol)
+  {
+    case IPPROTO_UDP:
+      printf("UDP yeah!\n");
+      break;
+    case IPPROTO_TCP:
+    case IPPROTO_ICMP:
+    case IPPROTO_IP:
+    default:
+      printf("bad protocol\n");
+  }
+
+  /* FIXME print source and destination IP addresses */
+  printf("src: %s\n", inet_ntoa(ip->ip_src));
+  printf("dst: %s\n", inet_ntoa(ip->ip_dst));
+
+  //pcap_breakloop();
+
+  printf("zpracovavam paket\n"); //FIXME debug
 }

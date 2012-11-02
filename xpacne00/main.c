@@ -3,7 +3,9 @@
  * 2012-10-15 10:28:53 CEST
  */
 
-#include "main.h"
+#include "args.h"
+#include "monitor.h"
+#include "list.h"
 
 int main(int argc, char *argv[])
 {
@@ -14,5 +16,10 @@ int main(int argc, char *argv[])
 
   /* start monitoring the given interface using libpcap */
   //FIXME retval nejaka specialni a podle ni vypisovat chyby?
-  return start_sip_monitoring(&args);
+  int ret = start_sip_monitoring(&args);
+
+  if (args->f != NULL) list_dispose(args->f);
+  if (args->t != NULL) list_dispose(args->t);
+
+  return ret;
 }

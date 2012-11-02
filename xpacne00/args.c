@@ -3,6 +3,13 @@
  * 2012-10-15 10:28:53 CEST
  */
 
+#include <stdbool.h>
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>  /* exit */
+//#include <stdint.h>  /* FIXME WTF??????? */
+#include <unistd.h>  /* getopt */
+#include "list.h"
 #include "args.h"
 
 //FIXME testovat uplne libovolne poradi argumentu
@@ -48,7 +55,7 @@ void handle_args(int argc, char *argv[], args_s *args)
   args->a        = false;
   args->c        = false;
   args->f        = NULL;
-  args->t        = NULL
+  args->t        = NULL;
 
   /* help */
   if (argc == 1)
@@ -142,7 +149,7 @@ void handle_args(int argc, char *argv[], args_s *args)
         if (args->f == NULL) args->f = list_init();
 
         if (! list_item_present(args->f, optarg))
-          list_add(args->l, optarg);
+          list_add(args->f, optarg);
 
         break;
 
@@ -150,7 +157,7 @@ void handle_args(int argc, char *argv[], args_s *args)
         if (args->t == NULL) args->t = list_init();
 
         if (! list_item_present(args->t, optarg))
-          list_add(args-t, optarg);
+          list_add(args->t, optarg);
 
         break;
 
@@ -160,10 +167,10 @@ void handle_args(int argc, char *argv[], args_s *args)
         if (args->t == NULL) args->t = list_init();
 
         if (! list_item_present(args->f, optarg))
-          list_add(args-f, optarg);
+          list_add(args->f, optarg);
 
         if (! list_item_present(args->t, optarg))
-          list_add(args-t, optarg);
+          list_add(args->t, optarg);
 
         break;
 

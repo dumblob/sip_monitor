@@ -3,17 +3,17 @@
  * 2012-10-15 10:28:53 CEST
  */
 
-#ifndef ARGS_H
-#define ARGS_H
+#ifndef LOCAL_ARGS_H
+#define LOCAL_ARGS_H
 
-//#include <unistd.h>
-//#include <stdlib.h>
-//#include <stdio.h>
 #include <stdbool.h>
-#include <assert.h>
 #include "list.h"
 
-// FIXME vytvorit 2 nafukovaci pole (from, for) s ukazateli na ID z argv[]
+//FIXME
+//extern char *optarg;
+//extern int optind;
+//extern int opterr;
+//int getopt(int, char **, const char *);
 
 typedef struct {
   bool implicit;  // no behaviour args given
