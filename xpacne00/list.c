@@ -5,12 +5,15 @@
 
 #include <stdlib.h>  /* malloc */
 #include <string.h>
+#include <assert.h>
 #include "common.h"
 #include "list.h"
 
 list_str_t *list_str_init(void)
 {
-  if ((list_str_t *tmp = malloc(sizeof(list_str_t))) == NULL)
+  list_str_t *tmp;
+
+  if ((tmp = malloc(sizeof(list_str_t))) == NULL)
     MALLOC_EXIT;
 
   tmp->head = NULL;
@@ -23,7 +26,9 @@ void list_str_add(list_str_t *l, char *d)
 {
   assert(l != NULL);
 
-  if ((list_str_item_t *tmp = malloc(sizeof(list_str_item_t))) == NULL)
+  list_str_item_t *tmp;
+
+  if ((tmp = malloc(sizeof(list_str_item_t))) == NULL)
     MALLOC_EXIT;
 
   tmp->data = d;

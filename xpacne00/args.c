@@ -146,31 +146,31 @@ void handle_args(int argc, char *argv[], args_s *args)
         }
 
       case 'f':
-        if (args->f == NULL) args->f = list_init();
+        if (args->f == NULL) args->f = list_str_init();
 
-        if (! list_item_present(args->f, optarg))
-          list_add(args->f, optarg);
+        if (! list_str_item_present(args->f, optarg))
+          list_str_add(args->f, optarg);
 
         break;
 
       case 't':
-        if (args->t == NULL) args->t = list_init();
+        if (args->t == NULL) args->t = list_str_init();
 
-        if (! list_item_present(args->t, optarg))
-          list_add(args->t, optarg);
+        if (! list_str_item_present(args->t, optarg))
+          list_str_add(args->t, optarg);
 
         break;
 
       case 'u':
-        if (args->f == NULL) args->f = list_init();
+        if (args->f == NULL) args->f = list_str_init();
 
-        if (args->t == NULL) args->t = list_init();
+        if (args->t == NULL) args->t = list_str_init();
 
-        if (! list_item_present(args->f, optarg))
-          list_add(args->f, optarg);
+        if (! list_str_item_present(args->f, optarg))
+          list_str_add(args->f, optarg);
 
-        if (! list_item_present(args->t, optarg))
-          list_add(args->t, optarg);
+        if (! list_str_item_present(args->t, optarg))
+          list_str_add(args->t, optarg);
 
         break;
 

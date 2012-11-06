@@ -8,10 +8,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <pcap.h>
 
 #define MALLOC_EXIT do { \
   fputs("malloc failed!\n", stderr); \
+  fflush(stderr); \
   exit(EXIT_FAILURE); \
 } while (0)
+
+struct {
+  pcap_t *handle;
+} global_vars;
 
 #endif
