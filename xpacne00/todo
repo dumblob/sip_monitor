@@ -3,6 +3,7 @@ todo
   radky zacinajici mezerou/tabulatorem se pripoji k predchozimu
   prvni radek je specialni "Request-Line" v BNF (radek 15067)
   zajima me "Method" v BNF (radek 12572)
+  testovat na image http://nes.fit.vutbr.cz/vbox/FreeBSD-8.2-20110906.ova
 
 rozsireni
   pridat parametr args.p jako port na kterem sniffovat (namisto defaltu)

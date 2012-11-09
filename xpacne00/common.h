@@ -6,17 +6,22 @@
 #ifndef LOCAL_COMMON_H
 #define LOCAL_COMMON_H
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdint.h>  /* HACK for pcap missing u_int u_short etc. ( */
+#define __USE_BSD    /*   needed under Linux)                      */
 #include <pcap.h>
 
-#define MALLOC_EXIT do { \
-  fputs("malloc failed!\n", stderr); \
-  fflush(stderr); \
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MY_EXIT(x) do { \
+  fputs(x "!\n", stderr); \
   exit(EXIT_FAILURE); \
 } while (0)
 
-struct {
+#define REGCOMP_EXIT MY_EXIT("regcomp failed")
+#define MALLOC_EXIT MY_EXIT("malloc failed")
+
+struct global_vars_s {
   pcap_t *handle;
 } global_vars;
 

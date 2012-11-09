@@ -6,18 +6,18 @@ EXE ?= sip_monitor
 SUB ?= xpacne00
 DOCNAME = manual
 CC ?= gcc
-CFLAGS ?= -std=c99 -W -Wall -Wextra -Werror -pedantic -D_POSIX_C_SOURCE=200112L
+CFLAGS ?= -std=c99 -W -Wall -Wextra -Werror -pedantic -D_POSIX_C_SOURCE=200112L -lpcap
 
 OBJ = $(SRC:.c=.o)
 
 all: $(EXE)
 
 debug: CFLAGS += -DDEBUG -g3
-debug: CC += -DDEBUG -g3
+#debug: CC += -DDEBUG -g3
 debug: all
 
 $(EXE): $(OBJ)
-	$(CC) $(CFLAGS) -O2 -o $@ $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $(OBJ)
 
 # article | report | book | memoir | letter | slides (transparent folie)
 doc:
@@ -45,4 +45,4 @@ clean:
 	rm -f $(OBJ) $(EXE) $(SUB).tar *~
 
 .c.o:
-	$(CC) $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -O2 -c $<

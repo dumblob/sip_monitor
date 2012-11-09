@@ -7,7 +7,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>  /* exit */
-//#include <stdint.h>  /* FIXME WTF??????? */
 #include <unistd.h>  /* getopt */
 #include "list.h"
 #include "args.h"
@@ -100,7 +99,7 @@ void handle_args(int argc, char *argv[], args_s *args)
       case 'i':
         if (args->i == NULL)
         {
-          args->i = argv[optind];
+          args->i = argv[optind -1];
           break;
         }
         else
@@ -176,16 +175,16 @@ void handle_args(int argc, char *argv[], args_s *args)
 
       /* '?' */
       default:
-        fprintf(stderr, "Unknown argument \"%c\" given\n", (char)opt);
+        fprintf(stderr, "Unknown argument \"%s\" given.\n", argv[optind -1]);
         exit(EXIT_FAILURE);
     }
   }
 
-  /* optind points to the first unknown (according to optstring) argument */
+  /* optind points to next argument (after the current one) in argv */
   if (optind != argc)
   {
     assert(optind < argc);
-    fprintf(stderr, "Unknown argument \"%s\" given\n", argv[optind]);
+    fprintf(stderr, "Unknown argument \"%s\" given!\n", argv[optind]);
     exit(EXIT_FAILURE);
   }
 
