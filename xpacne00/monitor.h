@@ -23,56 +23,49 @@
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 
-#define __ERE_ALPHANUM "[A-Za-z0-9]" //hotovo
-#define __ERE_RESERVED "[;/?:@&=+$,]" //hotovo
-#define __ERE_UNRESERVED "(" __ERE_ALPHANUM "|" __ERE_MARK ")"//hotovo
-#define __ERE_ESCAPED "%[0-9A-Fa-f][0-9A-Fa-f]" //hotovo
-//#define __ERE_TELEPHONE_SUBSCRIBER 
-#define __ERE_PASSWORD "(" __ERE_UNRESERVED "|" __ERE_ESCAPED "|[&=+$,])*" //hotovo
-
-
-#define __ERE_USER "(" __ERE_UNRESERVED "|" __ERE_ESCAPED "|[&=+$,;?/])+"
-#define __ERE_USERINFO "(" __ERE_USER "|" __ERE_TELEPHONE_SUBSCRIBER ")(:" __ERE_PASSWORD ")?@" //hotovo
-
-
-#define __ERE_PORT "[0-9]+"
-#define __ERE_IPV4ADDRESS "[0-9]\{1,3\}[.][0-9]\{1,3\}[.][0-9]\{1,3\}[.][0-9]\{1,3\}"//hotovo
-#define __ERE_HEXSEQ "[A-Fa-f0-9]\{1,4\}(:[A-Fa-f0-9]\{1,4\})*" //hotovo
-#define __ERE_HEXPART "(" __ERE_HEXSEQ "|" __ERE_HEXSEQ "::(" __ERE_HEXSEQ ")?|::" __ERE_HEXSEQ ")" //hotovo
-#define __ERE_IPV6REFERENCE "[[]" __ERE_HEXPART "(:" __ERE_IPV4ADDRESS ")?[]]"//hotovo
-#define __ERE_HOSTNAME "([.])*([A-Za-z]|[A-Za-z](" __ERE_ALPHANUM "|-)*" __ERE_ALPHANUM ")" //hotovo
-#define __ERE_HOSTPORT "(" __ERE_HOSTNAME "|" __ERE_IPV4ADDRESS "|" __ERE_IPV6REFERENCE ")(:" __ERE_PORT ")?"//hotovo
-
-
-#define __ERE_SIP_URI "sips:(" __ERE_USERINFO ")?" __ERE_HOSTPORT __ERE_URI_PARAMETERS "(" __ERE_HEADERS ")?"//hotovo
-#define __ERE_SIP_URI "sip:(" __ERE_USERINFO ")?" __ERE_HOSTPORT __ERE_URI_PARAMETERS "(" __ERE_HEADERS ")?"//hotovo
-#define __ERE_SCHEME "[A-Za-z][A-Za-z0-9+-.]*" //hotovo
-#define __ERE_HIER_PART "(" __ERE_NET_PATH "|" __ERE_ABS_PATH ")([?]" __ERE_QUERY ")?" //hotovo
-#define __ERE_OPAQUE_PART "(" __ERE_RESERVED "|" __ERE_ESCAPED "|[;?:@&=+$,])(" __ERE_RESERVED "|" __ERE_UNRESERVED "|" __ERE_ESCAPED ")*" //hotovo
-#define __ERE_ABSOLUTEURI __ERE_SCHEME ":(" __ERE_HIER_PART "|" __ERE_OPAQUE-PART ")" //hotovo
-#define __ERE_TOKEN "([-.!%*_+`'~]|" __ERE_ALPHANUM ")+" //hotovo
-#define __ERE_QUOTED_STRING "\"([^\"\\]*(\\.[^\"\\]*)*)\"" //hotovo
-#define __ERE_ADDR_SPEC "(" __ERE_SIP_URI "|" __ERE_SIPS_URI "|" __ERE_ABSOLUTEURI ")"  //hotovo
-#define __ERE_SIP_VERSION "SIP/[0-9]+[.][0-9]+"  //hotovo
-#define ERE_SIP_INVITE "^INVITE " __ERE_REQUEST_URI " " __ERE_SIP_VERSION "$" //hotovo
-//#define ERE_SIP_FROM   "^(From|f):(( ?" __ERE_TOKEN "( " __ERE_TOKEN ")*)| ?" __ERE_QUOTED_STRING ")? ?<" __ERE_ADDR_SPEC ">$"  //hotovo
-#define ERE_SIP_FROM   "^(From|f):(( ?" __ERE_TOKEN "( " __ERE_TOKEN ")*)| ?" __ERE_QUOTED_STRING ")? ?<([^>])>$"  //hotovo
-#define ERE_SIP_TO     "^To: (.*)$"
-#define ERE_SIP_BYE    "^BYE (.*)$"
-#define MAX_ERE_LEN MAX(MAX(MAX( \
-          sizeof(ERE_SIP_FROM  ), \
-          sizeof(ERE_SIP_TO    )), \
-          sizeof(ERE_SIP_INVITE)), \
-          sizeof(ERE_SIP_BYE   ))
+//FIXME otestovat zanorene quoted strings
+#define __ERE_SIP_VERSION   "SIP/[0-9]+[.][0-9]+"
+/* request-uri -> [^ ]+ */
+#define ERE_SIP_INVITE      "^INVITE [^ ]+ " __ERE_SIP_VERSION "$"
+#define ERE_SIP_CANCEL      "^CANCEL [^ ]+ " __ERE_SIP_VERSION "$"
+#define ERE_SIP_BYE         "^BYE [^ ]+ "    __ERE_SIP_VERSION "$"
+#define __ERE_TOKEN         "[-.!%*_+`'~A-Za-z0-9]+"
+#define __ERE_QUOTED_STRING "\"([^\"\\]*(\\.[^\"\\]*)*)\""
+/* addr-spec -> [^>] */
+#define __ERE_SIP_FROM_TO_POSTFIX \
+  "[ \t]*:([ \t]*(" __ERE_TOKEN "( " __ERE_TOKEN ")*)|[ \t]*(" \
+  __ERE_QUOTED_STRING "))?[ \t]*<([^>])>$"
+#define ERE_SIP_FROM        "^(From|f)" __ERE_SIP_FROM_TO_POSTFIX
+#define ERE_SIP_TO          "^(To|t)"   __ERE_SIP_FROM_TO_POSTFIX
+#define ERE_SIP_FROM_TO_LABEL0_I 3  /* FIXME co takhle odriznout mezery a tabulator az za behu???????? the non-empty label from these 2 will */
+#define ERE_SIP_FROM_TO_LABEL1_I 5  /*   be chosen at runtime */
+#define ERE_SIP_FROM_TO_ADDR_I   6
+/* reason-phrase -> (.)* */
+#define ERE_SIP_STATUS      "^" __ERE_SIP_VERSION " ([0-9]{3}) ?(.)*$"
+#define ERE_SIP_STATUS_STATUS_I  1
+#define ERE_SIP_STATUS_REASON_I  2
+/* word@word -> (.)+ */
+#define ERE_SIP_CALL_ID     "^(Call-ID|i)[ \t]*:[ \t]*(.)+$"
+#define MAX_ERE_LEN MAX(MAX(MAX(MAX(MAX(MAX( \
+              sizeof(ERE_SIP_INVITE ), \
+              sizeof(ERE_SIP_CANCEL )), \
+              sizeof(ERE_SIP_BYE    )), \
+              sizeof(ERE_SIP_FROM   )), \
+              sizeof(ERE_SIP_TO     )), \
+              sizeof(ERE_SIP_STATUS )), \
+              sizeof(ERE_SIP_CALL_ID))
 
 typedef struct {
   /* one line of SIP message (though there is no limit in RFC) */
   uint8_t *line;
   regmatch_t pmatch[MAX_ERE_LEN];
+  regex_t sip_invite;  /* must be on the first line */
+  regex_t sip_cancel;  /* must be on the first line */
+  regex_t sip_bye;     /* must be on the first line */
   regex_t sip_from;
   regex_t sip_to;
-  regex_t sip_invite;
-  regex_t sip_bye;
+  regex_t sip_status;  /* must be on the first line */
+  regex_t sip_call_id;
 } payload_mem_t;
 
 /* ethernet frame */

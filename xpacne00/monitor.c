@@ -300,7 +300,10 @@ fprintf(stderr, "__JOINED LINE|%s\n", mem->line);
     //              if exists(call_id): set state=calling, vypsat ten cas zahajeni a kdo komu vola
     //            prijme BYE; vypise cas zahajeni a kdo komu vola a delku hovoru
     //-a: prida info o prozvoneni + odmitnuti
-    //    SIP/2.0 non-200 ???: stejne jako u "default BYE" + duvod neprijeti:
+    //    prozvoneni == CANCEL [see section 10]
+    //      if ! exists(call_id) -> return() // proste se ignoruje
+    //      >>>If UAC wishes to give up on its call attempt entirely, it can send a CANCEL.
+    //    odmitnuti == SIP/2.0 non-200 ???: stejne jako u "default BYE" + duvod neprijeti:
     //      486 (Busy Here)
     //      600 (Busy Everywhere)
     //      488 (Not Acceptable Here) - tady rozparsovat jeste "Warning header",
