@@ -423,14 +423,24 @@ fprintf(stderr, ">>> NO MATCH [other...]\n");
   if (method == SIP_METHOD_INVITE)
   {
     printf("--INVITE\n");//FIXME
-    /* FIXME handle re-INVITE */
-    if ((sip_data = malloc(sizeof(list_sip_data_t))) == NULL) MALLOC_EXIT;
 
-    sip_data->start_time = NULL;
-    sip_data->last_state = SIP_METHOD_INVITE;
-    sip_data->from = NULL;
-    sip_data->to = NULL;
-    sip_data->call_id = NULL;
+    if (list_sip_item_present(mem->calls, call_id) == NULL)
+    {
+      /* FIXME handle re-INVITE */
+      if ((sip_data = malloc(sizeof(list_sip_data_t))) == NULL) MALLOC_EXIT;
+
+      sip_data->start_time = NULL;
+      sip_data->last_state = method;
+      sip_data->from = from_addr;
+      sip_data->to = to_addr;
+      sip_data->call_id = call_id;
+
+      call_id = NULL;  //FIXME do NOT forget to set it to NULL
+      from_addr = NULL;
+      to_addr = NULL;
+
+      list_sip_add(mem->calls, sip_data);
+    }
   }
   else if ((y = list_sip_item_present(mem->calls, call_id)) != NULL)
   {
@@ -445,16 +455,19 @@ fprintf(stderr, ">>> NO MATCH [other...]\n");
     /* SIP_METHOD_STATUS (SIP_METHOD_UNKNOWN is impossible) */
     else
     {
+      //FIXME pozor, tohle muze byt i odpoved brany, ze se nas nepodarilo spojit
       printf("--STATUS\n");//FIXME
     }
   }
+  else
+  {printf("--WTF?????????????????????????????????\n");}//FIXME
 
-  printf("reason     %s\n", reason    );
-  printf("from_label %s\n", from_label);
-  printf("from_addr  %s\n", from_addr );
-  printf("to_label   %s\n", to_label  );
-  printf("to_addr    %s\n", to_addr   );
-  printf("call_id    %s\n", call_id   );
+  printf("reason     %sXXX\n", reason    );
+  printf("from_label %sXXX\n", from_label);
+  printf("from_addr  %sXXX\n", from_addr );
+  printf("to_label   %sXXX\n", to_label  );
+  printf("to_addr    %sXXX\n", to_addr   );
+  printf("call_id    %sXXX\n", call_id   );
 
   if (reason     != NULL) free(reason);
   if (from_label != NULL) free(from_label);
