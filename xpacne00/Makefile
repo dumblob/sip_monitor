@@ -1,7 +1,7 @@
 # make [ | all | debug | doc | submit | clean ]
 
-HDR = common.h args.h list.h monitor.h
-SRC = args.c list.c monitor.c main.c
+HDR = common.h args.h list_str.h list_sip.h monitor.h
+SRC = args.c list_str.c list_sip.c monitor.c main.c
 EXE ?= sip_monitor
 SUB ?= xpacne00
 DOCNAME = manual

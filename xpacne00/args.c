@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>  /* exit */
 #include <unistd.h>  /* getopt */
-#include "list.h"
+#include "list_str.h"
 #include "args.h"
 
 //FIXME testovat uplne libovolne poradi argumentu

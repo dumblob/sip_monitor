@@ -25,4 +25,12 @@ struct global_vars_s {
   pcap_t *handle;
 } global_vars;
 
+typedef enum {
+  SIP_METHOD_UNKNOWN,  /* not part of SIP RFC */
+  SIP_METHOD_INVITE,
+  SIP_METHOD_CANCEL,
+  SIP_METHOD_BYE,
+  SIP_METHOD_STATUS
+} sip_method_t;
+
 #endif

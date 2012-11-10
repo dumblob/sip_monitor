@@ -7,14 +7,13 @@
 #include <string.h>
 #include <assert.h>
 #include "common.h"
-#include "list.h"
+#include "list_str.h"
 
 list_str_t *list_str_init(void)
 {
   list_str_t *tmp;
 
-  if ((tmp = malloc(sizeof(list_str_t))) == NULL)
-    MALLOC_EXIT;
+  if ((tmp = malloc(sizeof(list_str_t))) == NULL) MALLOC_EXIT;
 
   tmp->head = NULL;
 
@@ -28,39 +27,12 @@ void list_str_add(list_str_t *l, char *d)
 
   list_str_item_t *tmp;
 
-  if ((tmp = malloc(sizeof(list_str_item_t))) == NULL)
-    MALLOC_EXIT;
+  if ((tmp = malloc(sizeof(list_str_item_t))) == NULL) MALLOC_EXIT;
 
   tmp->data = d;
   tmp->next = l->head;
 
   l->head = tmp;
-}
-
-/* do not free data */
-void list_str_remove(list_str_t *l, char *d)
-{
-  assert(l != NULL);
-
-  list_str_item_t *tmp = l->head;
-  list_str_item_t *prev = NULL;
-
-  while (tmp != NULL)
-  {
-    if (! strcmp(tmp->data, d))
-    {
-      if (prev == NULL)
-        l->head = tmp->next;
-      else
-        prev->next = tmp->next;
-
-      free(tmp);
-      return;
-    }
-
-    prev = tmp;
-    tmp = tmp->next;
-  }
 }
 
 list_str_item_t *list_str_item_present(list_str_t *l, char *d)

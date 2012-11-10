@@ -10,7 +10,7 @@
 #include <signal.h>
 #include "args.h"
 #include "monitor.h"
-#include "list.h"
+#include "list_str.h"
 #include "common.h"
 
 extern struct global_vars_s global_vars;
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
   sigfillset(&sigblock);
   struct sigaction signew = {
     .sa_handler    = my_sa_handler,
-    //.sa_sigaction  = NULL,  /* may overlap with sa_handler => not use both */
+    //.sa_sigaction  = NULL,  /* may overlap with sa_handler => do not use both */
     .sa_mask       = sigblock,
     .sa_flags      = 0,
   };

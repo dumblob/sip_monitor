@@ -14,6 +14,7 @@
 #include <stdint.h>  /* uintXX_t */
 #include <regex.h>
 #include "args.h"
+#include "list_sip.h"
 
 #define RING_BUF_SIZE 8192  /* for 1 packet */
 #define READ_TIMEOUT 300  /* ms */
@@ -41,7 +42,7 @@
   "[ \t]*:[ \t]*((" __ERE_TOKEN "( " __ERE_TOKEN ")*|" __ERE_QUOTED_STRING ")[ \t]*)?<([^>]+)>.*$"
 #define ERE_SIP_FROM "^(From|f)" __ERE_SIP_FROM_TO_POSTFIX
 #define ERE_SIP_TO   "^(To|t)"   __ERE_SIP_FROM_TO_POSTFIX
-#define ERE_SIP_FROM_TO_LABEL_I 3
+#define ERE_SIP_FROM_TO_LABEL_I 5
 #define ERE_SIP_FROM_TO_ADDR_I  7
 
 /* word@word -> (.+) */
@@ -57,14 +58,7 @@
               sizeof(ERE_SIP_TO     )), \
               sizeof(ERE_SIP_CALL_ID))
 
-typedef enum {
-  SIP_METHOD_UNKNOWN,  /* not part of SIP RFC */
-  SIP_METHOD_INVITE,
-  SIP_METHOD_CANCEL,
-  SIP_METHOD_BYE,
-  SIP_METHOD_STATUS,
-} sip_method_t;
-
+/* package with allocated memory for passing through various functions */
 typedef struct {
   /* one line of SIP message (though there is no limit in RFC) */
   char *line;
@@ -76,6 +70,7 @@ typedef struct {
   regex_t sip_from;
   regex_t sip_to;
   regex_t sip_call_id;
+  list_sip_t *calls;
 } payload_mem_t;
 
 /* ethernet frame */

@@ -14,6 +14,7 @@
 #include "common.h"
 #include "args.h"
 #include "monitor.h"
+#include "list_sip.h"
 
 extern struct global_vars_s global_vars;
 
@@ -67,6 +68,7 @@ int start_sip_monitoring(args_s *args)
   if (regcomp(&mem.sip_from,    ERE_SIP_FROM,    REG_EXTENDED)) REGCOMP_EXIT;
   if (regcomp(&mem.sip_to,      ERE_SIP_TO,      REG_EXTENDED)) REGCOMP_EXIT;
   if (regcomp(&mem.sip_call_id, ERE_SIP_CALL_ID, REG_EXTENDED)) REGCOMP_EXIT;
+  mem.calls = list_sip_init();
 
 #ifdef DEBUG
   printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_INVITE   );
@@ -89,6 +91,7 @@ int start_sip_monitoring(args_s *args)
   regfree(&mem.sip_from);
   regfree(&mem.sip_to);
   regfree(&mem.sip_call_id);
+  list_sip_dispose(mem.calls);
 
   if (ret == -1)
   {
@@ -226,10 +229,12 @@ fprintf(stderr, "cur_len        %d\n"
 
   CHECK_PACKET_LEN;
 
-//FIXME
-printf("!!!!!!!!!!!!!!!!!!  %d == %d  !!!!!!!!!!!!!!!!!!!\n", cur_len, header->caplen - (packet - _packet))
-//  handle_sip_data((payload_mem_t *)mem, packet, header->caplen - (packet - _packet));
-//  handle_sip_data((payload_mem_t *)mem, packet, cur_len);
+#ifdef DEBUG
+printf("!!!!!!!!!!!!!!!!!!  %d == %ld  !!!!!!!!!!!!!!!!!!!\n", cur_len, header->caplen - (packet - _packet));
+mem = mem;
+#else
+  handle_sip_data((payload_mem_t *)mem, packet, header->caplen - (packet - _packet));
+#endif
 }
 
 #ifdef DEBUG
@@ -266,9 +271,17 @@ fprintf(stderr, "--------------SIP data of size %d:\n", len);
   uint32_t l = 0;
   uint32_t offset = 0;
 
-  bool first_line = true;
-  //char status[3] = "200";
   sip_method_t method = SIP_METHOD_UNKNOWN;
+  char status[] = "200";
+  char *reason = NULL;
+  char *from_label = NULL;
+  char *from_addr = NULL;
+  char *to_label = NULL;
+  char *to_addr = NULL;
+  char *call_id = NULL;
+  char *warning = NULL; //FIXME pridat regexp
+  int tmp;
+  list_sip_data_t *sip_data = NULL;
 
   /* loop through joined mem->lines */
   while (l + offset < len)
@@ -317,20 +330,33 @@ fprintf(stderr, "__JOINED LINE|%s\n", mem->line);
     //-f: pokud non-NULL, vypsat pouze hovody od <id>
     //-u: pokud non-NULL, vypsat pouze hovody pro <id>
 
-    if (first_line)
+    if (method == SIP_METHOD_UNKNOWN)
     {
-      first_line = false;
-
       /* we are interested only in the following methods */
-      method = SIP_METHOD_;
-      if      (! regexec(&mem->sip_invite,  mem->line, MAX_ERE_LEN, mem->pmatch, 0))
-      { printf("%%%%%%%% invite\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
-      else if (! regexec(&mem->sip_cancel,  mem->line, MAX_ERE_LEN, mem->pmatch, 0))
-      { printf("%%%%%%%% cancel\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
-      else if (! regexec(&mem->sip_bye,     mem->line, MAX_ERE_LEN, mem->pmatch, 0))
-      { printf("%%%%%%%% bye\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
-      else if (! regexec(&mem->sip_status,  mem->line, MAX_ERE_LEN, mem->pmatch, 0))
-      { printf("%%%%%%%% status\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
+      if      (! regexec(&mem->sip_invite, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+      {
+        method = SIP_METHOD_INVITE;
+      }
+      else if (! regexec(&mem->sip_cancel, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+      {
+        method = SIP_METHOD_CANCEL;
+      }
+      else if (! regexec(&mem->sip_bye,    mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+      {
+        method = SIP_METHOD_BYE;
+      }
+      else if (! regexec(&mem->sip_status, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+      {
+        method = SIP_METHOD_STATUS;
+
+        strncpy(status, mem->line + mem->pmatch[ERE_SIP_STATUS_STATUS_I].rm_so, 3);
+
+        tmp = mem->pmatch[ERE_SIP_STATUS_REASON_I].rm_eo -
+              mem->pmatch[ERE_SIP_STATUS_REASON_I].rm_so;
+        if ((reason = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
+        strncpy(reason, mem->line + mem->pmatch[ERE_SIP_STATUS_REASON_I].rm_so, tmp);
+        reason[tmp] = '\0';
+      }
       else
       {
 #ifdef DEBUG
@@ -341,36 +367,101 @@ fprintf(stderr, ">>> NO MATCH [method]\n");
     }
     else
     {
-      switch (method)
+      if (! regexec(&mem->sip_from, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
       {
-        case SIP_METHOD_INVITE:
-          break;
-        case SIP_METHOD_CANCEL:
-          break;
-        case SIP_METHOD_BYE:
-          break;
-        case SIP_METHOD_STATUS:
-          break;
-        /* SIP_METHOD_UNKNOWN */
-        default:
-          return;
+        tmp = mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_eo -
+              mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_so;
+        if ((from_label = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
+        strncpy(from_label, mem->line + mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_so, tmp);
+        from_label[tmp] = '\0';
+
+        tmp = mem->pmatch[ERE_SIP_FROM_TO_ADDR_I].rm_eo -
+              mem->pmatch[ERE_SIP_FROM_TO_ADDR_I].rm_so;
+        if ((from_addr = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
+        strncpy(from_addr, mem->line + mem->pmatch[ERE_SIP_FROM_TO_ADDR_I].rm_so, tmp);
+        from_addr[tmp] = '\0';
       }
+      else if (! regexec(&mem->sip_to, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+      {
+        tmp = mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_eo -
+              mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_so;
+        if ((to_label = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
+        strncpy(to_label, mem->line + mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_so, tmp);
+        to_label[tmp] = '\0';
+
+        tmp = mem->pmatch[ERE_SIP_FROM_TO_ADDR_I].rm_eo -
+              mem->pmatch[ERE_SIP_FROM_TO_ADDR_I].rm_so;
+        if ((to_addr = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
+        strncpy(to_addr, mem->line + mem->pmatch[ERE_SIP_FROM_TO_ADDR_I].rm_so, tmp);
+        to_addr[tmp] = '\0';
+      }
+      else if (! regexec(&mem->sip_call_id, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+      {
+        tmp = mem->pmatch[ERE_SIP_CALL_ID_I].rm_eo -
+              mem->pmatch[ERE_SIP_CALL_ID_I].rm_so;
+        if ((call_id = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
+        strncpy(call_id , mem->line + mem->pmatch[ERE_SIP_CALL_ID_I].rm_so, tmp);
+        call_id[tmp] = '\0';
+      }
+#ifdef DEBUG
+else
+fprintf(stderr, ">>> NO MATCH [other...]\n");
+#endif
     }
 
-    if      (! regexec(&mem->sip_from,    mem->line, MAX_ERE_LEN, mem->pmatch, 0))
-    { printf("%%%%%%%% from\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
-    else if (! regexec(&mem->sip_to,      mem->line, MAX_ERE_LEN, mem->pmatch, 0))
-    { printf("%%%%%%%% to\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
-    else if (! regexec(&mem->sip_call_id, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
-    { printf("%%%%%%%% call-id\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
-
-
-    //strncpy(protocol, loc + pmatch[EXPR_PROTO].rm_so,
-    //    pmatch[EXPR_PROTO].rm_eo - pmatch[EXPR_PROTO].rm_so);
-    //protocol[pmatch[EXPR_PROTO].rm_eo - pmatch[EXPR_PROTO].rm_so] = '\0';
-
-    first_line = false;
+    /* avoid processing unnecessary data */
+    if (call_id != NULL &&
+        ((method == SIP_METHOD_INVITE && from_addr != NULL && to_addr != NULL) ||
+         (method == SIP_METHOD_CANCEL) ||
+         (method == SIP_METHOD_BYE) ||
+         (method == SIP_METHOD_STATUS && warning != NULL))
+       ) break;
   }
+
+  list_sip_item_t *y = NULL;
+
+  if (method == SIP_METHOD_INVITE)
+  {
+    printf("--INVITE\n");//FIXME
+    /* FIXME handle re-INVITE */
+    if ((sip_data = malloc(sizeof(list_sip_data_t))) == NULL) MALLOC_EXIT;
+
+    sip_data->start_time = NULL;
+    sip_data->last_state = SIP_METHOD_INVITE;
+    sip_data->from = NULL;
+    sip_data->to = NULL;
+    sip_data->call_id = NULL;
+  }
+  else if ((y = list_sip_item_present(mem->calls, call_id)) != NULL)
+  {
+    if (method == SIP_METHOD_CANCEL)
+    {
+      printf("--CANCEL\n");//FIXME
+    }
+    else if (method == SIP_METHOD_BYE)
+    {
+      printf("--BYE\n");//FIXME
+    }
+    /* SIP_METHOD_STATUS (SIP_METHOD_UNKNOWN is impossible) */
+    else
+    {
+      printf("--STATUS\n");//FIXME
+    }
+  }
+
+  printf("reason     %s\n", reason    );
+  printf("from_label %s\n", from_label);
+  printf("from_addr  %s\n", from_addr );
+  printf("to_label   %s\n", to_label  );
+  printf("to_addr    %s\n", to_addr   );
+  printf("call_id    %s\n", call_id   );
+
+  if (reason     != NULL) free(reason);
+  if (from_label != NULL) free(from_label);
+  if (from_addr  != NULL) free(from_addr);
+  if (to_label   != NULL) free(to_label);
+  if (to_addr    != NULL) free(to_addr);
+  if (call_id    != NULL) free(call_id);
 
   fflush(stdout);
 #ifdef DEBUG
