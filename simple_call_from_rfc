@@ -1,0 +1,38 @@
+// zadam o zahajeni hovoru
+INVITE sip:bob@biloxi.com SIP/2.0
+To: Bob <sip:bob@biloxi.com>
+From: Alice <sip:alice@atlanta.com>;tag=1928301774
+Call-ID: a84b4c76e66710
+CSeq: 314159 INVITE
+// dostanu odpoved ringing
+SIP/2.0 180 Ringing
+To: Bob <sip:bob@biloxi.com>;tag=a6c85cf
+From: Alice <sip:alice@atlanta.com>;tag=1928301774
+Call-ID: a84b4c76e66710
+CSeq: 314159 INVITE
+// dostanu info, ze bob to vzal
+SIP/2.0 200 OK
+To: Bob <sip:bob@biloxi.com>;tag=a6c85cf
+From: Alice <sip:alice@atlanta.com>;tag=1928301774
+Call-ID: a84b4c76e66710
+CSeq: 314159 INVITE
+// potvrdim bobovi (primo jemu posilam), ze jsem dostala od nej veskere info, cimz se zahaji samotny hovor
+ACK sip:bob@192.0.2.4 SIP/2.0
+To: Bob <sip:bob@biloxi.com>;tag=a6c85cf
+From: Alice <sip:alice@atlanta.com>;tag=1928301774
+Call-ID: a84b4c76e66710
+CSeq: 314159 ACK
+// bob ukoncuje hovor (primo mne posila info)
+BYE sip:alice@pc33.atlanta.com SIP/2.0
+From: Bob <sip:bob@biloxi.com>;tag=a6c85cf
+To: Alice <sip:alice@atlanta.com>;tag=1928301774
+Call-ID: a84b4c76e66710
+CSeq: 231 BYE
+// ja bobovi potvrdim to ukonceni
+SIP/2.0 200 OK
+From: Bob <sip:bob@biloxi.com>;tag=a6c85cf
+To: Alice <sip:alice@atlanta.com>;tag=1928301774
+Call-ID: a84b4c76e66710
+CSeq: 231 BYE
+
+vim: set ft=c:

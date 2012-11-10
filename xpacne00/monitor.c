@@ -57,22 +57,38 @@ int start_sip_monitoring(args_s *args)
 
   payload_mem_t mem;
 
-  if ((mem.line = malloc(sizeof(uint8_t) * RING_BUF_SIZE)) == NULL)
+  if ((mem.line = malloc(sizeof(char) * RING_BUF_SIZE)) == NULL)
     MALLOC_EXIT;
   memset((void *)mem.pmatch, 0, MAX_ERE_LEN);
-  if (regcomp(&mem.sip_from,   ERE_SIP_FROM,   REG_EXTENDED)) REGCOMP_EXIT;
-  if (regcomp(&mem.sip_to,     ERE_SIP_TO,     REG_EXTENDED)) REGCOMP_EXIT;
-  if (regcomp(&mem.sip_invite, ERE_SIP_INVITE, REG_EXTENDED)) REGCOMP_EXIT;
-  if (regcomp(&mem.sip_bye,    ERE_SIP_BYE,    REG_EXTENDED)) REGCOMP_EXIT;
+  if (regcomp(&mem.sip_invite,  ERE_SIP_INVITE,  REG_EXTENDED)) REGCOMP_EXIT;
+  if (regcomp(&mem.sip_cancel,  ERE_SIP_CANCEL,  REG_EXTENDED)) REGCOMP_EXIT;
+  if (regcomp(&mem.sip_bye,     ERE_SIP_BYE,     REG_EXTENDED)) REGCOMP_EXIT;
+  if (regcomp(&mem.sip_status,  ERE_SIP_STATUS,  REG_EXTENDED)) REGCOMP_EXIT;
+  if (regcomp(&mem.sip_from,    ERE_SIP_FROM,    REG_EXTENDED)) REGCOMP_EXIT;
+  if (regcomp(&mem.sip_to,      ERE_SIP_TO,      REG_EXTENDED)) REGCOMP_EXIT;
+  if (regcomp(&mem.sip_call_id, ERE_SIP_CALL_ID, REG_EXTENDED)) REGCOMP_EXIT;
+
+#ifdef DEBUG
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_INVITE   );
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_CANCEL   );
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_BYE      );
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_STATUS   );
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_FROM     );
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_TO       );
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_CALL_ID  );
+#endif
 
   int ret = pcap_loop(global_vars.handle, -1, handle_packet, (void *)&mem);
 
   pcap_close(global_vars.handle);
   free(mem.line);
+  regfree(&mem.sip_invite);
+  regfree(&mem.sip_cancel);
+  regfree(&mem.sip_bye);
+  regfree(&mem.sip_status);
   regfree(&mem.sip_from);
   regfree(&mem.sip_to);
-  regfree(&mem.sip_invite);
-  regfree(&mem.sip_bye);
+  regfree(&mem.sip_call_id);
 
   if (ret == -1)
   {
@@ -92,12 +108,15 @@ int start_sip_monitoring(args_s *args)
 void handle_packet(uint8_t *mem, const struct pcap_pkthdr *header,
     const uint8_t *_packet)
 {
-  /* captured length */
-  uint32_t cur_len = header->caplen;
+#ifdef DEBUG
+  uint32_t cur_len = header->caplen; /* captured length */
+#endif
   uint8_t *packet = (uint8_t *)_packet;
 
   /* jump over the ethernet header */
-  cur_len -= sizeof(eth_hdr_t);
+#ifdef DEBUG
+cur_len -= sizeof(eth_hdr_t);
+#endif
   packet  += sizeof(eth_hdr_t);
   CHECK_PACKET_LEN;
 
@@ -130,8 +149,8 @@ fprintf(stderr, "FRAGMENTED PACKET FOUND => exit processing\n");
           return;
       }
 
-      cur_len -= IPv4_hdrlen(((ipv4_hdr_t *)packet)->ver_hdrlen);
 #ifdef DEBUG
+cur_len -= IPv4_hdrlen(((ipv4_hdr_t *)packet)->ver_hdrlen);
 fprintf(stderr, "cur_len       %d\n"
                 "ipv4 data len %d (MUST be the same as cur_len!)\n",
                 cur_len,
@@ -162,8 +181,8 @@ fprintf(stderr, "cur_len       %d\n"
             return;
         }
 
-        cur_len -= sizeof(ipv6_hdr_t);
 #ifdef DEBUG
+cur_len -= sizeof(ipv6_hdr_t);
 fprintf(stderr, "cur_len       %d\n"
                 "ipv6 data len %d (MUST be the same as cur_len!)\n",
                 cur_len,
@@ -187,15 +206,15 @@ fprintf(stderr, "sizeof(tcp_hdr_t) %ld\n"
                 "TCP header len    %d (MUST be the same as sizeof(tcp_hdr_t)!)\n",
                 sizeof(tcp_hdr_t),
                 TCP_hdrlen(ntohs(((tcp_hdr_t *)packet)->len_res_con)));
+cur_len -= sizeof(tcp_hdr_t);
 #endif
-    cur_len -= sizeof(tcp_hdr_t);
     packet  += sizeof(tcp_hdr_t);
   }
   /* jump over the UDP header */
   else
   {
-    cur_len -= sizeof(udp_hdr_t);
 #ifdef DEBUG
+cur_len -= sizeof(udp_hdr_t);
 fprintf(stderr, "cur_len        %d\n"
                 "UDP header len %ld (MUST be the same as cur_len!)\n",
                 cur_len,
@@ -207,13 +226,28 @@ fprintf(stderr, "cur_len        %d\n"
 
   CHECK_PACKET_LEN;
 
-  /* FIXME print source and destination IP addresses */
-  //printf("src: %s\n", inet_ntoa(ip->ip_src));
-  //printf("dst: %s\n", inet_ntoa(ip->ip_dst));
-
-  // FIXME handle_sip_data(packet, header->caplen - (packet - _packet));
-  handle_sip_data((payload_mem_t *)mem, packet, cur_len);
+//FIXME
+printf("!!!!!!!!!!!!!!!!!!  %d == %d  !!!!!!!!!!!!!!!!!!!\n", cur_len, header->caplen - (packet - _packet))
+//  handle_sip_data((payload_mem_t *)mem, packet, header->caplen - (packet - _packet));
+//  handle_sip_data((payload_mem_t *)mem, packet, cur_len);
 }
+
+#ifdef DEBUG
+void print_regex_parts(char *str, regmatch_t *pmatch, int size)
+{
+  for (int i = 0; i < size; ++i)
+  {
+    if (pmatch[i].rm_so != -1)
+    {
+      char c = str[pmatch[i].rm_eo];
+      str[pmatch[i].rm_eo] = '\0';
+      char *_str = str + pmatch[i].rm_so;
+      printf("%%%%%%%%%%%%%%  [%d] %s\n", i, _str);
+      str[pmatch[i].rm_eo] = c;
+    }
+  }
+}
+#endif
 
 /** parse SIP data and print some of the extracted info */
 void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len)
@@ -231,6 +265,10 @@ fprintf(stderr, "--------------SIP data of size %d:\n", len);
 
   uint32_t l = 0;
   uint32_t offset = 0;
+
+  bool first_line = true;
+  //char status[3] = "200";
+  sip_method_t method = SIP_METHOD_UNKNOWN;
 
   /* loop through joined mem->lines */
   while (l + offset < len)
@@ -254,43 +292,6 @@ fprintf(stderr, "--------------SIP data of size %d:\n", len);
 #ifdef DEBUG
 fprintf(stderr, "__JOINED LINE|%s\n", mem->line);
 #endif
-
-    // zadam o zahajeni hovoru
-    INVITE sip:bob@biloxi.com SIP/2.0
-    To: Bob <sip:bob@biloxi.com>
-    From: Alice <sip:alice@atlanta.com>;tag=1928301774
-    Call-ID: a84b4c76e66710
-    CSeq: 314159 INVITE
-    // dostanu odpoved ringing
-    SIP/2.0 180 Ringing
-    To: Bob <sip:bob@biloxi.com>;tag=a6c85cf
-    From: Alice <sip:alice@atlanta.com>;tag=1928301774
-    Call-ID: a84b4c76e66710
-    CSeq: 314159 INVITE
-    // dostanu info, ze bob to vzal
-    SIP/2.0 200 OK
-    To: Bob <sip:bob@biloxi.com>;tag=a6c85cf
-    From: Alice <sip:alice@atlanta.com>;tag=1928301774
-    Call-ID: a84b4c76e66710
-    CSeq: 314159 INVITE
-    // potvrdim bobovi (primo jemu posilam), ze jsem dostala od nej veskere info, cimz se zahaji samotny hovor
-    ACK sip:bob@192.0.2.4 SIP/2.0
-    To: Bob <sip:bob@biloxi.com>;tag=a6c85cf
-    From: Alice <sip:alice@atlanta.com>;tag=1928301774
-    Call-ID: a84b4c76e66710
-    CSeq: 314159 ACK
-    // bob ukoncuje hovor (primo mne posila info)
-    BYE sip:alice@pc33.atlanta.com SIP/2.0
-    From: Bob <sip:bob@biloxi.com>;tag=a6c85cf
-    To: Alice <sip:alice@atlanta.com>;tag=1928301774
-    Call-ID: a84b4c76e66710
-    CSeq: 231 BYE
-    // ja bobovi potvrdim to ukonceni
-    SIP/2.0 200 OK
-    From: Bob <sip:bob@biloxi.com>;tag=a6c85cf
-    To: Alice <sip:alice@atlanta.com>;tag=1928301774
-    Call-ID: a84b4c76e66710
-    CSeq: 231 BYE
 
     //FIXME re-INVITE nesmi zpusobit zmenu sezeni (bude mit stejnou Call-ID ale muze prijit z obou smeru)
     //by default: INVITE:
@@ -316,15 +317,63 @@ fprintf(stderr, "__JOINED LINE|%s\n", mem->line);
     //-f: pokud non-NULL, vypsat pouze hovody od <id>
     //-u: pokud non-NULL, vypsat pouze hovody pro <id>
 
-    //if (regexec(&regex, "my string", SUBEXPR, mem->pmatch, 0))
-    //{
-    //  THROW_ERR_RET("bad URI format, look at RFC 3986", msg);
-    //}
+    if (first_line)
+    {
+      first_line = false;
+
+      /* we are interested only in the following methods */
+      method = SIP_METHOD_;
+      if      (! regexec(&mem->sip_invite,  mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+      { printf("%%%%%%%% invite\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
+      else if (! regexec(&mem->sip_cancel,  mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+      { printf("%%%%%%%% cancel\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
+      else if (! regexec(&mem->sip_bye,     mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+      { printf("%%%%%%%% bye\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
+      else if (! regexec(&mem->sip_status,  mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+      { printf("%%%%%%%% status\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
+      else
+      {
+#ifdef DEBUG
+fprintf(stderr, ">>> NO MATCH [method]\n");
+#endif
+        return;
+      }
+    }
+    else
+    {
+      switch (method)
+      {
+        case SIP_METHOD_INVITE:
+          break;
+        case SIP_METHOD_CANCEL:
+          break;
+        case SIP_METHOD_BYE:
+          break;
+        case SIP_METHOD_STATUS:
+          break;
+        /* SIP_METHOD_UNKNOWN */
+        default:
+          return;
+      }
+    }
+
+    if      (! regexec(&mem->sip_from,    mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+    { printf("%%%%%%%% from\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
+    else if (! regexec(&mem->sip_to,      mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+    { printf("%%%%%%%% to\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
+    else if (! regexec(&mem->sip_call_id, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+    { printf("%%%%%%%% call-id\n"); print_regex_parts(mem->line, mem->pmatch, MAX_ERE_LEN); }
+
 
     //strncpy(protocol, loc + pmatch[EXPR_PROTO].rm_so,
     //    pmatch[EXPR_PROTO].rm_eo - pmatch[EXPR_PROTO].rm_so);
     //protocol[pmatch[EXPR_PROTO].rm_eo - pmatch[EXPR_PROTO].rm_so] = '\0';
+
+    first_line = false;
   }
 
   fflush(stdout);
+#ifdef DEBUG
+  fflush(stderr);
+#endif
 }
