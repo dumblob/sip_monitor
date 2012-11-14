@@ -406,48 +406,21 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
     {
       if (! regexec(&mem->sip_from, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
       {
-        //save_string_from_regex(tmp, from_label, ERE_SIP_FROM_TO_LABEL_I);
-        tmp = mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_eo -
-              mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_so;
-        if ((from_label = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
-        strncpy(from_label, mem->line + mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_so, tmp);
-        from_label[tmp] = '\0';
-
-        tmp = mem->pmatch[ERE_SIP_FROM_TO_ADDR_I].rm_eo -
-              mem->pmatch[ERE_SIP_FROM_TO_ADDR_I].rm_so;
-        if ((from_addr = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
-        strncpy(from_addr, mem->line + mem->pmatch[ERE_SIP_FROM_TO_ADDR_I].rm_so, tmp);
-        from_addr[tmp] = '\0';
+        save_string_from_regex(tmp, from_label, ERE_SIP_FROM_TO_LABEL_I);
+        save_string_from_regex(tmp, from_addr,  ERE_SIP_FROM_TO_ADDR_I);
       }
       else if (! regexec(&mem->sip_to, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
       {
-        tmp = mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_eo -
-              mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_so;
-        if ((to_label = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
-        strncpy(to_label, mem->line + mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_so, tmp);
-        to_label[tmp] = '\0';
-
-        tmp = mem->pmatch[ERE_SIP_FROM_TO_ADDR_I].rm_eo -
-              mem->pmatch[ERE_SIP_FROM_TO_ADDR_I].rm_so;
-        if ((to_addr = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
-        strncpy(to_addr, mem->line + mem->pmatch[ERE_SIP_FROM_TO_ADDR_I].rm_so, tmp);
-        to_addr[tmp] = '\0';
+        save_string_from_regex(tmp, to_label, ERE_SIP_FROM_TO_LABEL_I);
+        save_string_from_regex(tmp, to_addr,  ERE_SIP_FROM_TO_ADDR_I);
       }
       else if (! regexec(&mem->sip_call_id, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
       {
-        tmp = mem->pmatch[ERE_SIP_CALL_ID_I].rm_eo -
-              mem->pmatch[ERE_SIP_CALL_ID_I].rm_so;
-        if ((call_id = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
-        strncpy(call_id , mem->line + mem->pmatch[ERE_SIP_CALL_ID_I].rm_so, tmp);
-        call_id[tmp] = '\0';
+        save_string_from_regex(tmp, call_id, ERE_SIP_CALL_ID_I);
       }
       else if (! regexec(&mem->sip_warning, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
       {
-        tmp = mem->pmatch[ERE_SIP_WARNING_I].rm_eo -
-              mem->pmatch[ERE_SIP_WARNING_I].rm_so;
-        if ((warning = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
-        strncpy(warning , mem->line + mem->pmatch[ERE_SIP_WARNING_I].rm_so, tmp);
-        warning[tmp] = '\0';
+        save_string_from_regex(tmp, warning, ERE_SIP_WARNING_I);
       }
 #ifdef DEBUGG
       else
