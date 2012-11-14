@@ -19,6 +19,12 @@ Jelikoz SIP je ciste textovy protokol obsahujici i zajisteni spolehlivosti, muze
 
 Kaslu na accept-encoding, na fragmentaci, na maximalni velikost zpravy (ctu pouze to, co se vejde do 1 paketu), na pocitani kontrolniho souctu IPv4, TCP a UDP (takze vubec neresim zachazeni s pseudo hlavickami), na IP-in-IP, na jumbogramy v IPv6, na utf-8, na chybove stavy SIP atd..
 
+Co se provozu tyce, tak zezacatku se musi vterinku pockat nez se naplni okno, ktere pouziva libpcap - az pote zacne libpcap volat nasi obsluznou funkci.
+
+Ukoncuji pomoci 3 signalu...
+
+Zachycuji napr. pouze BYE a uz me nezajima potvrzeni OK, protoze pri BYE je stejne jiz klient "odpojeny"
+
 Moje posledni kapitola
 ======================
 

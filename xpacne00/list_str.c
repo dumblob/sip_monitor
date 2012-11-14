@@ -39,6 +39,8 @@ list_str_item_t *list_str_item_present(list_str_t *l, char *d)
 {
   assert(l != NULL);
 
+  if (d == NULL) return NULL;
+
   list_str_item_t *tmp = l->head;
 
   while (tmp != NULL)

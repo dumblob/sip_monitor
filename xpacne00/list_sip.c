@@ -36,7 +36,16 @@ void list_sip_add(list_sip_t *l, list_sip_data_t *d)
   l->head = tmp;
 }
 
-void list_sip_remove(list_sip_t *l, char *call_id)
+#define list_sip_free_pointers(x) \
+  do { \
+    if ((x)->data->from       != NULL) free((x)->data->from); \
+    if ((x)->data->from_label != NULL) free((x)->data->from_label); \
+    if ((x)->data->to         != NULL) free((x)->data->to); \
+    if ((x)->data->to_label   != NULL) free((x)->data->to_label); \
+    if ((x)->data->call_id    != NULL) free((x)->data->call_id);
+  } while (0)
+
+void list_sip_remove(list_sip_t *l, list_sip_item_t *item)
 {
   assert(l != NULL);
 
@@ -45,18 +54,14 @@ void list_sip_remove(list_sip_t *l, char *call_id)
 
   while (tmp != NULL)
   {
-    if (! strcmp(tmp->data->call_id, call_id))
+    if (tmp == item)
     {
       if (prev == NULL)
         l->head = tmp->next;
       else
         prev->next = tmp->next;
 
-      //FIXME
-      //free(l->head->data->start_time)
-      if (tmp->data->from    != NULL) free(tmp->data->from);
-      if (tmp->data->to      != NULL) free(tmp->data->to);
-      if (tmp->data->call_id != NULL) free(tmp->data->call_id);
+      list_sip_free_pointers(tmp);
 
       free(tmp->data);
       free(tmp);
@@ -71,6 +76,8 @@ void list_sip_remove(list_sip_t *l, char *call_id)
 list_sip_item_t *list_sip_item_present(list_sip_t *l, char *call_id)
 {
   assert(l != NULL);
+
+  if (call_id == NULL) return NULL;
 
   list_sip_item_t *tmp = l->head;
 
@@ -92,11 +99,7 @@ void list_sip_dispose (list_sip_t *l)
   {
     list_sip_item_t *tmp = l->head->next;
 
-    //FIXME
-    //free(l->head->data->start_time)
-    if (l->head->data->from    != NULL) free(l->head->data->from);
-    if (l->head->data->to      != NULL) free(l->head->data->to);
-    if (l->head->data->call_id != NULL) free(l->head->data->call_id);
+    list_sip_free_pointers(l->head);
 
     free(l->head->data);
     free(l->head);

@@ -6,14 +6,13 @@ EXE ?= sip_monitor
 SUB ?= xpacne00
 DOCNAME = manual
 CC ?= gcc
-CFLAGS ?= -std=c99 -W -Wall -Wextra -Werror -pedantic -D_POSIX_C_SOURCE=200112L -lpcap
+CFLAGS ?= -std=c99 -W -Wall -Wextra -Werror -pedantic -D_POSIX_C_SOURCE=200112L -lpcap -lrt
 
 OBJ = $(SRC:.c=.o)
 
 all: $(EXE)
 
-debug: CFLAGS += -DDEBUG -g3
-#debug: CC += -DDEBUG -g3
+debug: CFLAGS += -DDEBUGG -g3
 debug: all
 
 $(EXE): $(OBJ)

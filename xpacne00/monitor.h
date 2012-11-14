@@ -49,14 +49,19 @@
 #define ERE_SIP_CALL_ID "^(Call-ID|i)[ \t]*:[ \t]*(.+)$"
 #define ERE_SIP_CALL_ID_I 2
 
-#define MAX_ERE_LEN MAX(MAX(MAX(MAX(MAX(MAX( \
-              sizeof(ERE_SIP_INVITE ), \
-              sizeof(ERE_SIP_CANCEL )), \
-              sizeof(ERE_SIP_BYE    )), \
-              sizeof(ERE_SIP_STATUS )), \
-              sizeof(ERE_SIP_FROM   )), \
-              sizeof(ERE_SIP_TO     )), \
-              sizeof(ERE_SIP_CALL_ID))
+/* warning-value -> (.+) */
+#define ERE_SIP_WARNING "^Warning[ \t]*:[ \t]*(.+)$"
+#define ERE_SIP_WARNING_I 1
+
+#define MAX_ERE_LEN MAX(MAX(MAX(MAX(MAX(MAX(MAX( \
+                sizeof(ERE_SIP_INVITE ), \
+                sizeof(ERE_SIP_CANCEL )), \
+                sizeof(ERE_SIP_BYE    )), \
+                sizeof(ERE_SIP_STATUS )), \
+                sizeof(ERE_SIP_FROM   )), \
+                sizeof(ERE_SIP_TO     )), \
+                sizeof(ERE_SIP_CALL_ID)), \
+                sizeof(ERE_SIP_WARNING))
 
 /* package with allocated memory for passing through various functions */
 typedef struct {
@@ -70,6 +75,7 @@ typedef struct {
   regex_t sip_from;
   regex_t sip_to;
   regex_t sip_call_id;
+  regex_t sip_warning;
   list_sip_t *calls;
 } payload_mem_t;
 

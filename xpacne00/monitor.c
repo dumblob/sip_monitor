@@ -11,6 +11,7 @@
 #include <arpa/inet.h>  /* ntohs */
 #include <stdbool.h>
 #include <regex.h>
+#include <time.h>
 #include "common.h"
 #include "args.h"
 #include "monitor.h"
@@ -68,29 +69,32 @@ int start_sip_monitoring(args_s *args)
   if (regcomp(&mem.sip_from,    ERE_SIP_FROM,    REG_EXTENDED)) REGCOMP_EXIT;
   if (regcomp(&mem.sip_to,      ERE_SIP_TO,      REG_EXTENDED)) REGCOMP_EXIT;
   if (regcomp(&mem.sip_call_id, ERE_SIP_CALL_ID, REG_EXTENDED)) REGCOMP_EXIT;
+  if (regcomp(&mem.sip_warning, ERE_SIP_WARNING, REG_EXTENDED)) REGCOMP_EXIT;
   mem.calls = list_sip_init();
 
 #ifdef DEBUG
-  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_INVITE   );
-  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_CANCEL   );
-  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_BYE      );
-  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_STATUS   );
-  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_FROM     );
-  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_TO       );
-  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_CALL_ID  );
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_INVITE );
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_CANCEL );
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_BYE    );
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_STATUS );
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_FROM   );
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_TO     );
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_CALL_ID);
+  printf("########  [%ld]  %s\n", MAX_ERE_LEN, ERE_SIP_WARNING);
 #endif
 
   int ret = pcap_loop(global_vars.handle, -1, handle_packet, (void *)&mem);
 
   pcap_close(global_vars.handle);
   free(mem.line);
-  regfree(&mem.sip_invite);
-  regfree(&mem.sip_cancel);
-  regfree(&mem.sip_bye);
-  regfree(&mem.sip_status);
-  regfree(&mem.sip_from);
-  regfree(&mem.sip_to);
+  regfree(&mem.sip_invite );
+  regfree(&mem.sip_cancel );
+  regfree(&mem.sip_bye    );
+  regfree(&mem.sip_status );
+  regfree(&mem.sip_from   );
+  regfree(&mem.sip_to     );
   regfree(&mem.sip_call_id);
+  regfree(&mem.sip_warning);
   list_sip_dispose(mem.calls);
 
   if (ret == -1)
@@ -118,7 +122,7 @@ void handle_packet(uint8_t *mem, const struct pcap_pkthdr *header,
 
   /* jump over the ethernet header */
 #ifdef DEBUG
-cur_len -= sizeof(eth_hdr_t);
+  cur_len -= sizeof(eth_hdr_t);
 #endif
   packet  += sizeof(eth_hdr_t);
   CHECK_PACKET_LEN;
@@ -135,7 +139,7 @@ cur_len -= sizeof(eth_hdr_t);
                 ntohs(((ipv4_hdr_t *)packet)->flags_foff)) )) )
       {
 #ifdef DEBUG
-fprintf(stderr, "FRAGMENTED PACKET FOUND => exit processing\n");
+        fprintf(stderr, "FRAGMENTED PACKET FOUND => exit processing\n");
 #endif
         return;
       }
@@ -153,12 +157,12 @@ fprintf(stderr, "FRAGMENTED PACKET FOUND => exit processing\n");
       }
 
 #ifdef DEBUG
-cur_len -= IPv4_hdrlen(((ipv4_hdr_t *)packet)->ver_hdrlen);
-fprintf(stderr, "cur_len       %d\n"
-                "ipv4 data len %d (MUST be the same as cur_len!)\n",
-                cur_len,
-                ntohs(((ipv4_hdr_t *)packet)->totallen)
-                  - IPv4_hdrlen(((ipv4_hdr_t *)packet)->ver_hdrlen));
+      cur_len -= IPv4_hdrlen(((ipv4_hdr_t *)packet)->ver_hdrlen);
+      fprintf(stderr, "cur_len       %d\n"
+          "ipv4 data len %d (MUST be the same as cur_len!)\n",
+          cur_len,
+          ntohs(((ipv4_hdr_t *)packet)->totallen)
+          - IPv4_hdrlen(((ipv4_hdr_t *)packet)->ver_hdrlen));
 #endif
       packet +=  IPv4_hdrlen(((ipv4_hdr_t *)packet)->ver_hdrlen);
       CHECK_PACKET_LEN;
@@ -185,11 +189,11 @@ fprintf(stderr, "cur_len       %d\n"
         }
 
 #ifdef DEBUG
-cur_len -= sizeof(ipv6_hdr_t);
-fprintf(stderr, "cur_len       %d\n"
-                "ipv6 data len %d (MUST be the same as cur_len!)\n",
-                cur_len,
-                ntohs(((ipv6_hdr_t *)packet)->payloadlen));
+        cur_len -= sizeof(ipv6_hdr_t);
+        fprintf(stderr, "cur_len       %d\n"
+            "ipv6 data len %d (MUST be the same as cur_len!)\n",
+            cur_len,
+            ntohs(((ipv6_hdr_t *)packet)->payloadlen));
 #endif
          packet  += sizeof(ipv6_hdr_t);
         CHECK_PACKET_LEN;
@@ -205,11 +209,11 @@ fprintf(stderr, "cur_len       %d\n"
   if (tcp_found)
   {
 #ifdef DEBUG
-fprintf(stderr, "sizeof(tcp_hdr_t) %ld\n"
-                "TCP header len    %d (MUST be the same as sizeof(tcp_hdr_t)!)\n",
-                sizeof(tcp_hdr_t),
-                TCP_hdrlen(ntohs(((tcp_hdr_t *)packet)->len_res_con)));
-cur_len -= sizeof(tcp_hdr_t);
+    fprintf(stderr, "sizeof(tcp_hdr_t) %ld\n"
+        "TCP header len    %d (MUST be the same as sizeof(tcp_hdr_t)!)\n",
+        sizeof(tcp_hdr_t),
+        TCP_hdrlen(ntohs(((tcp_hdr_t *)packet)->len_res_con)));
+    cur_len -= sizeof(tcp_hdr_t);
 #endif
     packet  += sizeof(tcp_hdr_t);
   }
@@ -217,12 +221,12 @@ cur_len -= sizeof(tcp_hdr_t);
   else
   {
 #ifdef DEBUG
-cur_len -= sizeof(udp_hdr_t);
-fprintf(stderr, "cur_len        %d\n"
-                "UDP header len %ld (MUST be the same as cur_len!)\n",
-                cur_len,
-                ntohs(((udp_hdr_t *)packet)->len)
-                  - sizeof(udp_hdr_t));
+    cur_len -= sizeof(udp_hdr_t);
+    fprintf(stderr, "cur_len        %d\n"
+        "UDP header len %ld (MUST be the same as cur_len!)\n",
+        cur_len,
+        ntohs(((udp_hdr_t *)packet)->len)
+        - sizeof(udp_hdr_t));
 #endif
     packet  += sizeof(udp_hdr_t);
   }
@@ -230,8 +234,9 @@ fprintf(stderr, "cur_len        %d\n"
   CHECK_PACKET_LEN;
 
 #ifdef DEBUG
-printf("!!!!!!!!!!!!!!!!!!  %d == %ld  !!!!!!!!!!!!!!!!!!!\n", cur_len, header->caplen - (packet - _packet));
-mem = mem;
+  printf("!!!!!!!!!!!!!!!!!!  %d == %ld  !!!!!!!!!!!!!!!!!!!\n",
+      cur_len, header->caplen - (packet - _packet));
+  mem = mem;
 #else
   handle_sip_data((payload_mem_t *)mem, packet, header->caplen - (packet - _packet));
 #endif
@@ -254,18 +259,36 @@ void print_regex_parts(char *str, regmatch_t *pmatch, int size)
 }
 #endif
 
+#define MIDDLE_OUTPUT \
+  if (sip_data->from_label[0] != '\0') \
+    printf(" (%s)", sip_data->from_label); \
+  printf("\n  callee: %s", sip_data->to); \
+  if (sip_data->to_label[0] != '\0') \
+    printf(" (%s)", sip_data->to_label);
+
+#define save_string_from_regex(tmp, var, index) \
+  do { \
+        (tmp) = mem->pmatch[(index)].rm_eo - \
+                mem->pmatch[(index)].rm_so; \
+        if (((var) = malloc(sizeof(char) * ((tmp) +1))) == NULL) MALLOC_EXIT; \
+        strncpy((var), mem->line + mem->pmatch[(index)].rm_so, (tmp)); \
+        (var)[(tmp)] = '\0'; \
+  } while (0)
+
 /** parse SIP data and print some of the extracted info */
 void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len)
 {
   //FIXME rtc start ulozit take do listu, v pripade ukonceni spojeni
   //  vycist z listu a podle toho vyresit tento problem :)
-  //struct timespec ts_start;
+  //struct timespec ts_start {;
   //clock_gettime(CLOCK_MONOTONIC, &ts_start);
+  //time_t   tv_sec; /* secs */
+  //long     tv_nsec; /* nanoseconds */
   //ntp to muze bohuzel zmenit, takze i tak potrebuji
   //  if (new <= old) printf("undetectable (approaching zero)\n")
 
-#ifdef DEBUG
-fprintf(stderr, "--------------SIP data of size %d:\n", len);
+#ifdef DEBUGG
+  fprintf(stderr, "--------------SIP data of size %d:\n", len);
 #endif
 
   uint32_t l = 0;
@@ -279,9 +302,13 @@ fprintf(stderr, "--------------SIP data of size %d:\n", len);
   char *to_label = NULL;
   char *to_addr = NULL;
   char *call_id = NULL;
-  char *warning = NULL; //FIXME pridat regexp
+  char *warning = NULL;
   int tmp;
   list_sip_data_t *sip_data = NULL;
+  struct tm my_tm;
+
+#define STRFTIME_FORMAT "%d.%m.%Y %H:%M:%S"
+  char strftime_res[] = "14.11.2012 19:58:29";
 
   /* loop through joined mem->lines */
   while (l + offset < len)
@@ -303,7 +330,7 @@ fprintf(stderr, "--------------SIP data of size %d:\n", len);
     }
 
 #ifdef DEBUG
-fprintf(stderr, "__JOINED LINE|%s\n", mem->line);
+    fprintf(stderr, "__JOINED LINE|%s\n", mem->line);
 #endif
 
     //FIXME re-INVITE nesmi zpusobit zmenu sezeni (bude mit stejnou Call-ID ale muze prijit z obou smeru)
@@ -329,6 +356,16 @@ fprintf(stderr, "__JOINED LINE|%s\n", mem->line);
     //-c: modifikuje "default" tak, ze pri "SIP/2.0 200 OK" nic nevypisuje
     //-f: pokud non-NULL, vypsat pouze hovody od <id>
     //-u: pokud non-NULL, vypsat pouze hovody pro <id>
+
+    //otestovat
+    //  kompilaci pod FreeBSD ve virtualu
+    //  obycejny start + stop ekiga
+    //  zavolat na nesmysl bez zavinace
+    //  zavolat na nesmysl se zavinacem
+    //  zavolat na existujici linku, ktera to nevezme a budu to muset ukoncit
+    //  zavolat na linku, ktera to vezme a ja to ukoncim
+    //  zavolat na linku, ktera to vezme a ukonci
+    //  zavolat na linku, ktera to odmitne
 
     if (method == SIP_METHOD_UNKNOWN)
     {
@@ -359,8 +396,8 @@ fprintf(stderr, "__JOINED LINE|%s\n", mem->line);
       }
       else
       {
-#ifdef DEBUG
-fprintf(stderr, ">>> NO MATCH [method]\n");
+#ifdef DEBUGG
+        fprintf(stderr, ">>> WTF METHOD => return\n");
 #endif
         return;
       }
@@ -369,6 +406,7 @@ fprintf(stderr, ">>> NO MATCH [method]\n");
     {
       if (! regexec(&mem->sip_from, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
       {
+        //save_string_from_regex(tmp, from_label, ERE_SIP_FROM_TO_LABEL_I);
         tmp = mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_eo -
               mem->pmatch[ERE_SIP_FROM_TO_LABEL_I].rm_so;
         if ((from_label = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
@@ -403,9 +441,19 @@ fprintf(stderr, ">>> NO MATCH [method]\n");
         strncpy(call_id , mem->line + mem->pmatch[ERE_SIP_CALL_ID_I].rm_so, tmp);
         call_id[tmp] = '\0';
       }
-#ifdef DEBUG
-else
-fprintf(stderr, ">>> NO MATCH [other...]\n");
+      else if (! regexec(&mem->sip_warning, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
+      {
+        tmp = mem->pmatch[ERE_SIP_WARNING_I].rm_eo -
+              mem->pmatch[ERE_SIP_WARNING_I].rm_so;
+        if ((warning = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
+        strncpy(warning , mem->line + mem->pmatch[ERE_SIP_WARNING_I].rm_so, tmp);
+        warning[tmp] = '\0';
+      }
+#ifdef DEBUGG
+      else
+      {
+        fprintf(stderr, ">>> LINE does NOT match\n");
+      }
 #endif
     }
 
@@ -418,56 +466,140 @@ fprintf(stderr, ">>> NO MATCH [other...]\n");
        ) break;
   }
 
-  list_sip_item_t *y = NULL;
-
   if (method == SIP_METHOD_INVITE)
   {
-    printf("--INVITE\n");//FIXME
-
-    if (list_sip_item_present(mem->calls, call_id) == NULL)
+#ifdef DEBUGG
+    printf("--INVITE\n");
+#endif
+    if ((sip_data = list_sip_item_present(mem->calls, call_id)) == NULL)
     {
-      /* FIXME handle re-INVITE */
       if ((sip_data = malloc(sizeof(list_sip_data_t))) == NULL) MALLOC_EXIT;
 
-      sip_data->start_time = NULL;
+      assert(clock_gettime(CLOCK_MONOTONIC, &sip_data->start_time) == 0);
       sip_data->last_state = method;
-      sip_data->from = from_addr;
-      sip_data->to = to_addr;
-      sip_data->call_id = call_id;
-
-      call_id = NULL;  //FIXME do NOT forget to set it to NULL
-      from_addr = NULL;
-      to_addr = NULL;
+      sip_data->from       = from_addr;  from_addr  = NULL;
+      sip_data->from_label = from_label; from_label = NULL;
+      sip_data->to         = to_addr;    to_addr    = NULL;
+      sip_data->to_label   = to_label;   to_label   = NULL;
+      sip_data->call_id    = call_id;    call_id    = NULL;
 
       list_sip_add(mem->calls, sip_data);
     }
-  }
-  else if ((y = list_sip_item_present(mem->calls, call_id)) != NULL)
-  {
-    if (method == SIP_METHOD_CANCEL)
-    {
-      printf("--CANCEL\n");//FIXME
-    }
-    else if (method == SIP_METHOD_BYE)
-    {
-      printf("--BYE\n");//FIXME
-    }
-    /* SIP_METHOD_STATUS (SIP_METHOD_UNKNOWN is impossible) */
+    /* handle re-INVITE -> update from & to*/
     else
     {
-      //FIXME pozor, tohle muze byt i odpoved brany, ze se nas nepodarilo spojit
-      printf("--STATUS\n");//FIXME
+      sip_data->last_state = method;
+
+      free(sip_data->from);
+      sip_data->from = from_addr;
+      from_addr = NULL;
+
+      free(sip_data->from_label);
+      sip_data->from_label = from_label;
+      from_label = NULL;
+
+      free(sip_data->to);
+      sip_data->to = to_addr;
+      to_addr = NULL;
+
+      free(sip_data->to_label);
+      sip_data->to_label = to_label;
+      to_label = NULL;
     }
   }
-  else
-  {printf("--WTF?????????????????????????????????\n");}//FIXME
+  else if ((sip_data = list_sip_item_present(mem->calls, call_id)) != NULL)
+  {
+    switch (method)
+    {
+      case SIP_METHOD_CANCEL:
+#ifdef DEBUGG
+        printf("--CANCEL\n");
+#endif
+        printf("drop-call\n  caller: %s", sip_data->from);
 
-  printf("reason     %sXXX\n", reason    );
-  printf("from_label %sXXX\n", from_label);
-  printf("from_addr  %sXXX\n", from_addr );
-  printf("to_label   %sXXX\n", to_label  );
-  printf("to_addr    %sXXX\n", to_addr   );
-  printf("call_id    %sXXX\n", call_id   );
+        MIDDLE_OUTPUT
+
+        fputs("\n", stdout);
+        list_sip_remove(mem->calls, sip_data);
+        break;
+
+      case SIP_METHOD_BYE:
+#ifdef DEBUGG
+        printf("--BYE\n");
+#endif
+        struct timespec ts;
+        assert(clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
+        strftime(strftime_res, sizeof(strftime_res), STRFTIME_FORMAT,
+            gmtime(MAX(ts.tv_sec - sip_data->start_time.tv_sec, 0), &my_tm));
+
+        printf("end call [%s]:\n  caller: %s", strftime_res, sip_data->from);
+
+        MIDDLE_OUTPUT
+
+        printf("\n  duration: %s\n", strftime_res);
+        list_sip_remove(mem->calls, sip_data);
+        break;
+
+      /* SIP_METHOD_STATUS (SIP_METHOD_UNKNOWN is impossible) */
+      default:
+#ifdef DEBUGG
+        printf("--STATUS\n");
+#endif
+        //FIXME pozor, tohle muze byt i odpoved brany, ze se nas
+        //  nepodarilo spojit
+
+        /* STATUS can not terminate session => we are not interested in it */
+        if (sip_data->last_state != SIP_METHOD_INVITE) break;
+
+        if (! strncmp(status, "200", 3))
+        {
+          sip_data->last_state = SIP_METHOD_STATUS;
+
+          strftime(strftime_res, sizeof(strftime_res), STRFTIME_FORMAT,
+              gmtime(sip_data->start_time.tv_sec, &my_tm);
+
+          printf("new call [%s]:\n  caller: %s", strftime_res, sip_data->from);
+
+          MIDDLE_OUTPUT
+
+          fputs("\n", stdout);
+        }
+        else
+        {
+          printf("deny call [%s", (reason == NULL) ? "Unknown reason" : reason);
+
+          /* 486 600 ... => nothing; 488 => see Warning: */
+          if (warning != NULL && ! strncmp(status, "488", 3))
+            printf(" (%s)", warning);
+
+          printf("]:\n  caller: %s", sip_data->from);
+
+          MIDDLE_OUTPUT
+
+          fputs("\n", stdout);
+          list_sip_remove(mem->calls, sip_data);
+#ifdef DEBUGGG
+          if (! strncmp(status, "486", 3))
+            printf("MUST BE|Busy Here\n");
+          else if (! strncmp(status, "600", 3))
+            printf("MUST BE|Busy Everywhere\n");
+          else if (! strncmp(status, "488", 3))
+            printf("MUST BE|Not Acceptable Here\n");
+          else
+            printf("MUST BE|????Unknown reason?????\n");
+#endif
+        }
+    }
+#ifdef DEBUGG
+    printf("status     %sXXX\n", status    );
+    printf("reason     %sXXX\n", reason    );
+    printf("from_label %sXXX\n", from_label);
+    printf("from_addr  %sXXX\n", from_addr );
+    printf("to_label   %sXXX\n", to_label  );
+    printf("to_addr    %sXXX\n", to_addr   );
+    printf("call_id    %sXXX\n", call_id   );
+#endif
+  }
 
   if (reason     != NULL) free(reason);
   if (from_label != NULL) free(from_label);
