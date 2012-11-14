@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <regex.h>
 #include <time.h>
+#include <assert.h>
 #include "common.h"
 #include "args.h"
 #include "monitor.h"
@@ -502,8 +503,9 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
 #endif
         struct timespec ts;
         assert(clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
+        time_t tt = MAX(ts.tv_sec - sip_data->start_time.tv_sec, 0);
         strftime(strftime_res, sizeof(strftime_res), STRFTIME_FORMAT,
-            gmtime(MAX(ts.tv_sec - sip_data->start_time.tv_sec, 0), &my_tm));
+            gmtime_r(&tt, &my_tm));
 
         printf("end call [%s]:\n  caller: %s", strftime_res, sip_data->from);
 
@@ -529,7 +531,7 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
           sip_data->last_state = SIP_METHOD_STATUS;
 
           strftime(strftime_res, sizeof(strftime_res), STRFTIME_FORMAT,
-              gmtime(sip_data->start_time.tv_sec, &my_tm);
+              gmtime_r(&sip_data->start_time.tv_sec, &my_tm));
 
           printf("new call [%s]:\n  caller: %s", strftime_res, sip_data->from);
 

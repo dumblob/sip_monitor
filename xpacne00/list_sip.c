@@ -42,10 +42,10 @@ void list_sip_add(list_sip_t *l, list_sip_data_t *d)
     if ((x)->data->from_label != NULL) free((x)->data->from_label); \
     if ((x)->data->to         != NULL) free((x)->data->to); \
     if ((x)->data->to_label   != NULL) free((x)->data->to_label); \
-    if ((x)->data->call_id    != NULL) free((x)->data->call_id);
+    if ((x)->data->call_id    != NULL) free((x)->data->call_id); \
   } while (0)
 
-void list_sip_remove(list_sip_t *l, list_sip_item_t *item)
+void list_sip_remove(list_sip_t *l, list_sip_data_t *item)
 {
   assert(l != NULL);
 
@@ -54,7 +54,7 @@ void list_sip_remove(list_sip_t *l, list_sip_item_t *item)
 
   while (tmp != NULL)
   {
-    if (tmp == item)
+    if (tmp->data == item)
     {
       if (prev == NULL)
         l->head = tmp->next;
@@ -73,7 +73,7 @@ void list_sip_remove(list_sip_t *l, list_sip_item_t *item)
   }
 }
 
-list_sip_item_t *list_sip_item_present(list_sip_t *l, char *call_id)
+list_sip_data_t *list_sip_item_present(list_sip_t *l, char *call_id)
 {
   assert(l != NULL);
 
@@ -83,7 +83,7 @@ list_sip_item_t *list_sip_item_present(list_sip_t *l, char *call_id)
 
   while (tmp != NULL)
   {
-    if (! strcmp(tmp->data->call_id, call_id)) return tmp;
+    if (! strcmp(tmp->data->call_id, call_id)) return tmp->data;
 
     tmp = tmp->next;
   }

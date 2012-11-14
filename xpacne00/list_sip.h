@@ -33,8 +33,8 @@ typedef struct {
 
 list_sip_t      *list_sip_init        (void);
 void             list_sip_add         (list_sip_t *, list_sip_data_t *);
-void             list_sip_remove      (list_sip_t *, list_sip_item_t *);
-list_sip_item_t *list_sip_item_present(list_sip_t *, char *);
+void             list_sip_remove      (list_sip_t *, list_sip_data_t *);
+list_sip_data_t *list_sip_item_present(list_sip_t *, char *);
 void             list_sip_dispose     (list_sip_t *);
 
 #endif
