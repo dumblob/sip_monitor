@@ -401,7 +401,8 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
       {
         if ((sip_data = malloc(sizeof(list_sip_data_t))) == NULL) MALLOC_EXIT;
 
-        assert(clock_gettime(CLOCK_MONOTONIC, &sip_data->start_time) == 0);
+        assert(clock_gettime(CLOCK_REALTIME, &sip_data->start_time) == 0);
+        assert(clock_gettime(CLOCK_MONOTONIC, &sip_data->start_time_monotonic) == 0);
         sip_data->last_state = method;
         sip_data->from       = from_addr;  from_addr  = NULL;
         sip_data->from_label = from_label; from_label = NULL;
@@ -462,7 +463,8 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
         MIDDLE_OUTPUT;
         struct timespec my_ts;
         assert(clock_gettime(CLOCK_MONOTONIC, &my_ts) == 0);
-        print_duration(MAX(my_ts.tv_sec - sip_data->start_time.tv_sec, 0));
+        print_duration(MAX(my_ts.tv_sec -
+              sip_data->start_time_monotonic.tv_sec, 0));
 
         list_sip_remove(mem->calls, sip_data);
         break;

@@ -14,6 +14,7 @@
 
 typedef struct {
   struct timespec start_time;
+  struct timespec start_time_monotonic;
   sip_method_t last_state; //FIXME is it really needed to save this
   char *from;
   char *from_label;
