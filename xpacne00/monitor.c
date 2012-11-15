@@ -21,18 +21,12 @@
 
 extern struct global_vars_s global_vars;
 
-// FIXME man pcap
-// pcap_datalink() ziska info o eth_int
-//   pcap_lookupdev() pripojeni k sitovemu rozhrani
-
 /** monitor given device in promiscuitous mode using libpcap */
 int start_sip_monitoring(args_s *args)
 {
   char errbuf[PCAP_ERRBUF_SIZE];
   errbuf[0] = '\0';
 
-  //FIXME cteni ze souboru
-  //pcap_open_offline()
   /* 1 ~ promisc */
   if ((global_vars.handle = pcap_open_live(args->i, RING_BUF_SIZE, 1, READ_TIMEOUT,
           errbuf)) == NULL)
@@ -61,8 +55,8 @@ int start_sip_monitoring(args_s *args)
 
   payload_mem_t mem;
 
-  if ((mem.line = malloc(sizeof(char) * RING_BUF_SIZE)) == NULL)
-    MALLOC_EXIT;
+  mem.args = args;
+  if ((mem.line = malloc(sizeof(char) * RING_BUF_SIZE)) == NULL) MALLOC_EXIT;
   memset((void *)mem.pmatch, 0, MAX_ERE_LEN);
   if (regcomp(&mem.sip_invite,  ERE_SIP_INVITE,  REG_EXTENDED)) REGCOMP_EXIT;
   if (regcomp(&mem.sip_cancel,  ERE_SIP_CANCEL,  REG_EXTENDED)) REGCOMP_EXIT;
@@ -291,15 +285,6 @@ void print_duration(double x)
         (var)[(tmp)] = '\0'; \
   } while (0)
 
-#define PRINT_ORDINARY_END_CALL \
-  do { \
-    strftime(strftime_res, sizeof(strftime_res), STRFTIME_FORMAT, \
-        gmtime_r(&sip_data->start_time.tv_sec, &my_tm)); \
-    printf("end call [%s]:\n  caller: %s", strftime_res, sip_data->from); \
-    MIDDLE_OUTPUT; \
-    assert(clock_gettime(CLOCK_MONOTONIC, &ts) == 0); \
-    print_duration(MAX(ts.tv_sec - sip_data->start_time.tv_sec, 0)); \
-  } while (0)
 
 /** parse SIP data and print some of the extracted info */
 void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len)
@@ -320,9 +305,8 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
   char *to_addr = NULL;
   char *call_id = NULL;
   char *warning = NULL;
-  int tmp;
   list_sip_data_t *sip_data = NULL;
-
+  int tmp;
 #define STRFTIME_FORMAT "%d.%m.%Y %H:%M:%S"
   char strftime_res[] = "14.11.2012 19:58:29";
 
@@ -349,40 +333,6 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
     fprintf(stderr, "__JOINED LINE|%s\n", mem->line);
 #endif
 
-    //FIXME re-INVITE nesmi zpusobit zmenu sezeni (bude mit stejnou Call-ID ale muze prijit z obou smeru)
-    //by default: INVITE:
-    //              if exists(call_id): set state=invite caller= callee=
-    //              else:               set state=invite caller= callee= call_id=Call-ID time_start=timestamp
-    //            SIP/2.0 200 OK:
-    //              if exists(call_id): set state=calling, vypsat ten cas zahajeni a kdo komu vola
-    //            prijme BYE; vypise cas zahajeni a kdo komu vola a delku hovoru
-    //-a: prida info o prozvoneni + odmitnuti
-    //    prozvoneni == CANCEL [see section 10]
-    //      if ! exists(call_id) -> return() // proste se ignoruje
-    //      >>>If UAC wishes to give up on its call attempt entirely, it can send a CANCEL.
-    //    odmitnuti == SIP/2.0 non-200 ???: stejne jako u "default BYE" + duvod neprijeti:
-    //      486 (Busy Here)
-    //      600 (Busy Everywhere)
-    //      488 (Not Acceptable Here) - tady rozparsovat jeste "Warning header",
-    //          ktery obsahuje detaily proc to bylo zamitnuto
-    //        Warning: 370 devnull "Choose a bigger pipe"
-    //        Warning: 370 devnull "CHOOSE A BIGGER PIPE"
-    //        pokud neni pritomen, tak REASON==unknown
-    //      pokud nejaky dalsi chybovy stav, tak REASON==unknown
-    //-c: modifikuje "default" tak, ze pri "SIP/2.0 200 OK" nic nevypisuje
-    //-f: pokud non-NULL, vypsat pouze hovody od <id>
-    //-u: pokud non-NULL, vypsat pouze hovody pro <id>
-
-    //otestovat
-    //  kompilaci pod FreeBSD ve virtualu
-    //  obycejny start + stop ekiga
-    //  zavolat na nesmysl bez zavinace
-    //  zavolat na nesmysl se zavinacem
-    //  zavolat na existujici linku, ktera to nevezme a budu to muset ukoncit
-    //  zavolat na linku, ktera to vezme a ja to ukoncim
-    //  zavolat na linku, ktera to vezme a ukonci
-    //  zavolat na linku, ktera to odmitne
-
     if (method == SIP_METHOD_UNKNOWN)
     {
       /* we are interested only in the following methods */
@@ -406,9 +356,6 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
       }
       else
       {
-#ifdef DEBUGG
-        fprintf(stderr, ">>> WTF METHOD => return\n");
-#endif
         return;
       }
     }
@@ -432,12 +379,6 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
       {
         save_string_from_regex(tmp, warning, ERE_SIP_WARNING_I);
       }
-#ifdef DEBUGG
-      else
-      {
-        fprintf(stderr, ">>> LINE does NOT match\n");
-      }
-#endif
     }
 
     /* avoid processing unnecessary data */
@@ -453,27 +394,27 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
   {
     if ((sip_data = list_sip_item_present(mem->calls, call_id)) == NULL)
     {
-#ifdef DEBUGG
-    printf("--INVITE\n");
-#endif
-      if ((sip_data = malloc(sizeof(list_sip_data_t))) == NULL) MALLOC_EXIT;
+      if ((mem->args->f == NULL ||
+            list_str_item_present(mem->args->f, from_addr) != NULL) ||
+          (mem->args->t == NULL ||
+            list_str_item_present(mem->args->t, to_addr) != NULL))
+      {
+        if ((sip_data = malloc(sizeof(list_sip_data_t))) == NULL) MALLOC_EXIT;
 
-      assert(clock_gettime(CLOCK_MONOTONIC, &sip_data->start_time) == 0);
-      sip_data->last_state = method;
-      sip_data->from       = from_addr;  from_addr  = NULL;
-      sip_data->from_label = from_label; from_label = NULL;
-      sip_data->to         = to_addr;    to_addr    = NULL;
-      sip_data->to_label   = to_label;   to_label   = NULL;
-      sip_data->call_id    = call_id;    call_id    = NULL;
+        assert(clock_gettime(CLOCK_MONOTONIC, &sip_data->start_time) == 0);
+        sip_data->last_state = method;
+        sip_data->from       = from_addr;  from_addr  = NULL;
+        sip_data->from_label = from_label; from_label = NULL;
+        sip_data->to         = to_addr;    to_addr    = NULL;
+        sip_data->to_label   = to_label;   to_label   = NULL;
+        sip_data->call_id    = call_id;    call_id    = NULL;
 
-      list_sip_add(mem->calls, sip_data);
+        list_sip_add(mem->calls, sip_data);
+      }
     }
-    /* handle re-INVITE -> update from & to*/
+    /* handle re-INVITE -> update from & to */
     else
     {
-#ifdef DEBUGG
-    printf("--RE-INVITE\n");
-#endif
       sip_data->last_state = method;
 
       free(sip_data->from);
@@ -495,36 +436,34 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
   }
   else if ((sip_data = list_sip_item_present(mem->calls, call_id)) != NULL)
   {
-    struct timespec ts;
     struct tm my_tm;
 
     switch (method)
     {
       case SIP_METHOD_CANCEL:
-#ifdef DEBUGG
-        printf("--CANCEL\n");
-#endif
         /* CANCEL cancels only the INVITE request, otherwise does nothing */
         if (sip_data->last_state == SIP_METHOD_INVITE)
         {
-          printf("drop-call\n  caller: %s", sip_data->from);
-          MIDDLE_OUTPUT;
-          fputs("\n", stdout);
+          if (mem->args->a)
+          {
+            printf("drop-call\n  caller: %s", sip_data->from);
+            MIDDLE_OUTPUT;
+            fputs("\n", stdout);
+          }
+
           list_sip_remove(mem->calls, sip_data);
         }
-        //FIXME tohle melo zrusit pouze posledni invite pozadavek, ale nic
-        //  jineho (tzn. NE jiz probihajici hovor apod.)
-        //else
-        //{
-        //  PRINT_ORDINARY_END_CALL;
-        //}
         break;
 
       case SIP_METHOD_BYE:
-#ifdef DEBUGG
-        printf("--BYE\n");
-#endif
-        PRINT_ORDINARY_END_CALL;
+        strftime(strftime_res, sizeof(strftime_res), STRFTIME_FORMAT,
+            gmtime_r(&sip_data->start_time.tv_sec, &my_tm));
+        printf("end call [%s]:\n  caller: %s", strftime_res, sip_data->from);
+        MIDDLE_OUTPUT;
+        struct timespec my_ts;
+        assert(clock_gettime(CLOCK_MONOTONIC, &my_ts) == 0);
+        print_duration(MAX(my_ts.tv_sec - sip_data->start_time.tv_sec, 0));
+
         list_sip_remove(mem->calls, sip_data);
         break;
 
@@ -533,50 +472,44 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
 #ifdef DEBUGG
         printf("--STATUS\n");
 #endif
-        //FIXME pozor, tohle muze byt i odpoved brany, ze se nas
-        //  nepodarilo spojit
-
         /* STATUS can not terminate session => we are not interested in it */
         if (sip_data->last_state != SIP_METHOD_INVITE) break;
 
         /* some info */
         if (status[0] == '1') break;
 
-        //FIXME
-        //if (! strncmp(status, "200", 3))
+        /* 200 ... */
         if (status[0] == '2')
         {
           sip_data->last_state = SIP_METHOD_STATUS;
 
-          strftime(strftime_res, sizeof(strftime_res), STRFTIME_FORMAT,
-              gmtime_r(&sip_data->start_time.tv_sec, &my_tm));
+          if (! mem->args->c)
+          {
+            strftime(strftime_res, sizeof(strftime_res), STRFTIME_FORMAT,
+                gmtime_r(&sip_data->start_time.tv_sec, &my_tm));
 
-          printf("new call [%s]:\n  caller: %s", strftime_res, sip_data->from);
-          MIDDLE_OUTPUT;
-          fputs("\n", stdout);
+            printf("new call [%s]:\n  caller: %s", strftime_res, sip_data->from);
+            MIDDLE_OUTPUT;
+            fputs("\n", stdout);
+          }
         }
         else
         {
-          printf("denied call [%s", (reason == NULL) ? "Unknown reason" : reason);
+          /* HINT: this could also be an error from gateway... */
 
-          /* 486 600 ... => nothing; 488 => see Warning: */
-          if (warning != NULL && ! strncmp(status, "488", 3))
-            printf(" (%s)", warning);
+          if (mem->args->a)
+          {
+            printf("denied call [%s", (reason == NULL) ? "Unknown reason" : reason);
 
-          printf("]:\n  caller: %s", sip_data->from);
-          MIDDLE_OUTPUT;
-          fputs("\n", stdout);
+            /* 486 600 ... => nothing; 488 => see Warning: */
+            if (warning != NULL && ! strncmp(status, "488", 3))
+              printf(" (%s)", warning);
+
+            printf("]:\n  caller: %s", sip_data->from);
+            MIDDLE_OUTPUT;
+            fputs("\n", stdout);
+          }
           list_sip_remove(mem->calls, sip_data);
-#ifdef DEBUGG
-          if (! strncmp(status, "486", 3))
-            printf("MUST BE|Busy Here\n");
-          else if (! strncmp(status, "600", 3))
-            printf("MUST BE|Busy Everywhere\n");
-          else if (! strncmp(status, "488", 3))
-            printf("MUST BE|Not Acceptable Here\n");
-          else
-            printf("MUST BE|????Unknown reason?????\n");
-#endif
         }
     }
 #ifdef DEBUGG
@@ -596,6 +529,7 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
   if (to_label   != NULL) free(to_label);
   if (to_addr    != NULL) free(to_addr);
   if (call_id    != NULL) free(call_id);
+  if (warning    != NULL) free(warning);
 
   fflush(stdout);
 #ifdef DEBUG

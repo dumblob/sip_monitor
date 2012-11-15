@@ -1,3 +1,38 @@
 7916 - UDP and TCP are mandatory (with fragmentation :()
 sip pouziva utf-8 (RFC 2279)
 Content-Encoding se tyka pouze Content-Type (hlavicka je vzdy ASCII)
+
+otestovat
+  kompilaci + spusteni pod FreeBSD ve virtualu
+  obycejny start + stop ekiga
+  zavolat na nesmysl bez zavinace
+  zavolat na nesmysl se zavinacem
+  zavolat na existujici linku, ktera to nevezme a budu to muset ukoncit
+  zavolat na linku, ktera to vezme a ja to ukoncim
+  zavolat na linku, ktera to vezme a ukonci
+  zavolat na linku, ktera to odmitne
+
+implementace
+  re-INVITE nesmi zpusobit zmenu sezeni (ma stejn. Call-ID; muze prijit z obou smeru)
+  implicit: INVITE:
+                if exists(call_id): set state=invite caller= callee=
+                else:               set state=invite caller= callee= call_id=Call-ID time_start=timestamp
+              SIP/2.0 200 OK:
+                if exists(call_id): set state=calling, vypsat ten cas zahajeni a kdo komu vola
+              prijme BYE; vypise cas zahajeni a kdo komu vola a delku hovoru
+  -a: prida info o prozvoneni + odmitnuti
+      prozvoneni == CANCEL [see section 10]
+        if ! exists(call_id) -> return() // proste se ignoruje
+        >>>If UAC wishes to give up on its call attempt entirely, it can send a CANCEL.
+      odmitnuti == SIP/2.0 non-200 ???: stejne jako u "default BYE" + duvod neprijeti:
+        486 (Busy Here)
+        600 (Busy Everywhere)
+        488 (Not Acceptable Here) - tady rozparsovat jeste "Warning header",
+            ktery obsahuje detaily proc to bylo zamitnuto
+          Warning: 370 devnull "Choose a bigger pipe"
+          Warning: 370 devnull "CHOOSE A BIGGER PIPE"
+          pokud neni pritomen, tak REASON==unknown
+        pokud nejaky dalsi chybovy stav, tak REASON==unknown
+  -c: modifikuje "default" tak, ze pri "SIP/2.0 200 OK" nic nevypisuje
+  -f: pokud non-NULL, vypsat pouze hovody od <id>
+  -u: pokud non-NULL, vypsat pouze hovody pro <id>

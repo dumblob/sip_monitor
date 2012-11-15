@@ -19,12 +19,11 @@
 #define RING_BUF_SIZE 8192  /* for 1 packet */
 #define READ_TIMEOUT 300  /* ms */
 
-#define IP_VERSION_4 4  /* was not able to figure out a portable way */
+#define IP_VERSION_4 4  /* content of the version field in IP header */
 #define IP_VERSION_6 6  /* - || - */
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 
-//FIXME otestovat zanorene quoted strings
 #define __ERE_SIP_VERSION "SIP/[0-9]+[.][0-9]+"
 /* request-uri -> [^ ]+ */
 #define ERE_SIP_INVITE      "^INVITE [^ ]+ " __ERE_SIP_VERSION "$"
@@ -65,6 +64,7 @@
 
 /* package with allocated memory for passing through various functions */
 typedef struct {
+  args_s *args;
   /* one line of SIP message (though there is no limit in RFC) */
   char *line;
   regmatch_t pmatch[MAX_ERE_LEN];
@@ -154,6 +154,10 @@ typedef struct {
 
 int start_sip_monitoring(args_s *);
 void handle_packet(uint8_t *, const struct pcap_pkthdr *, const uint8_t *);
+#ifdef DEBUG
+void print_regex_parts(char *, regmatch_t *, int);
+#endif
+void print_duration(double);
 void handle_sip_data(payload_mem_t *, const uint8_t *, const uint32_t);
 
 #endif
