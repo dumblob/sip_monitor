@@ -13,6 +13,7 @@
 #include <regex.h>
 #include <time.h>
 #include <assert.h>
+#include <math.h>
 #include "common.h"
 #include "args.h"
 #include "monitor.h"
@@ -260,12 +261,26 @@ void print_regex_parts(char *str, regmatch_t *pmatch, int size)
 }
 #endif
 
+void print_duration(double x)
+{
+  printf("\n  duration: %dyears %dmonths %ddays %02d:%02d:%02d%s\n",
+      (int)trunc(x / 60.0 / 60.0 / 24.0 / (365.25 / 12.0) / 12.0),
+      (int)trunc(x / 60.0 / 60.0 / 24.0 / (365.25 / 12.0)),
+      (int)trunc(x / 60.0 / 60.0 / 24.0),
+      (int)trunc(x / 60.0 / 60.0),
+      (int)trunc(x / 60.0),
+      (int)x,
+      ((int)x == 0) ? " (approaching zero)" : "");
+}
+
 #define MIDDLE_OUTPUT \
+  do { \
   if (sip_data->from_label[0] != '\0') \
     printf(" (%s)", sip_data->from_label); \
   printf("\n  callee: %s", sip_data->to); \
   if (sip_data->to_label[0] != '\0') \
-    printf(" (%s)", sip_data->to_label);
+    printf(" (%s)", sip_data->to_label); \
+  } while (0)
 
 #define save_string_from_regex(tmp, var, index) \
   do { \
@@ -276,18 +291,19 @@ void print_regex_parts(char *str, regmatch_t *pmatch, int size)
         (var)[(tmp)] = '\0'; \
   } while (0)
 
+#define PRINT_ORDINARY_END_CALL \
+  do { \
+    strftime(strftime_res, sizeof(strftime_res), STRFTIME_FORMAT, \
+        gmtime_r(&sip_data->start_time.tv_sec, &my_tm)); \
+    printf("end call [%s]:\n  caller: %s", strftime_res, sip_data->from); \
+    MIDDLE_OUTPUT; \
+    assert(clock_gettime(CLOCK_MONOTONIC, &ts) == 0); \
+    print_duration(MAX(ts.tv_sec - sip_data->start_time.tv_sec, 0)); \
+  } while (0)
+
 /** parse SIP data and print some of the extracted info */
 void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len)
 {
-  //FIXME rtc start ulozit take do listu, v pripade ukonceni spojeni
-  //  vycist z listu a podle toho vyresit tento problem :)
-  //struct timespec ts_start {;
-  //clock_gettime(CLOCK_MONOTONIC, &ts_start);
-  //time_t   tv_sec; /* secs */
-  //long     tv_nsec; /* nanoseconds */
-  //ntp to muze bohuzel zmenit, takze i tak potrebuji
-  //  if (new <= old) printf("undetectable (approaching zero)\n")
-
 #ifdef DEBUGG
   fprintf(stderr, "--------------SIP data of size %d:\n", len);
 #endif
@@ -306,7 +322,6 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
   char *warning = NULL;
   int tmp;
   list_sip_data_t *sip_data = NULL;
-  struct tm my_tm;
 
 #define STRFTIME_FORMAT "%d.%m.%Y %H:%M:%S"
   char strftime_res[] = "14.11.2012 19:58:29";
@@ -327,7 +342,7 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
       l = 0;
 
       /* check boundaries + handle SIP line joining */
-      if (offset < len && data[offset] != ' ') break;
+      if (offset < len && (data[offset] != ' ' || data[offset] != '\t')) break;
     }
 
 #ifdef DEBUG
@@ -386,14 +401,8 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
       else if (! regexec(&mem->sip_status, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
       {
         method = SIP_METHOD_STATUS;
-
         strncpy(status, mem->line + mem->pmatch[ERE_SIP_STATUS_STATUS_I].rm_so, 3);
-
-        tmp = mem->pmatch[ERE_SIP_STATUS_REASON_I].rm_eo -
-              mem->pmatch[ERE_SIP_STATUS_REASON_I].rm_so;
-        if ((reason = malloc(sizeof(char) * (tmp +1))) == NULL) MALLOC_EXIT;
-        strncpy(reason, mem->line + mem->pmatch[ERE_SIP_STATUS_REASON_I].rm_so, tmp);
-        reason[tmp] = '\0';
+        save_string_from_regex(tmp, reason, ERE_SIP_STATUS_REASON_I);
       }
       else
       {
@@ -442,11 +451,11 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
 
   if (method == SIP_METHOD_INVITE)
   {
+    if ((sip_data = list_sip_item_present(mem->calls, call_id)) == NULL)
+    {
 #ifdef DEBUGG
     printf("--INVITE\n");
 #endif
-    if ((sip_data = list_sip_item_present(mem->calls, call_id)) == NULL)
-    {
       if ((sip_data = malloc(sizeof(list_sip_data_t))) == NULL) MALLOC_EXIT;
 
       assert(clock_gettime(CLOCK_MONOTONIC, &sip_data->start_time) == 0);
@@ -462,6 +471,9 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
     /* handle re-INVITE -> update from & to*/
     else
     {
+#ifdef DEBUGG
+    printf("--RE-INVITE\n");
+#endif
       sip_data->last_state = method;
 
       free(sip_data->from);
@@ -483,35 +495,36 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
   }
   else if ((sip_data = list_sip_item_present(mem->calls, call_id)) != NULL)
   {
+    struct timespec ts;
+    struct tm my_tm;
+
     switch (method)
     {
       case SIP_METHOD_CANCEL:
 #ifdef DEBUGG
         printf("--CANCEL\n");
 #endif
-        printf("drop-call\n  caller: %s", sip_data->from);
-
-        MIDDLE_OUTPUT
-
-        fputs("\n", stdout);
-        list_sip_remove(mem->calls, sip_data);
+        /* CANCEL cancels only the INVITE request, otherwise does nothing */
+        if (sip_data->last_state == SIP_METHOD_INVITE)
+        {
+          printf("drop-call\n  caller: %s", sip_data->from);
+          MIDDLE_OUTPUT;
+          fputs("\n", stdout);
+          list_sip_remove(mem->calls, sip_data);
+        }
+        //FIXME tohle melo zrusit pouze posledni invite pozadavek, ale nic
+        //  jineho (tzn. NE jiz probihajici hovor apod.)
+        //else
+        //{
+        //  PRINT_ORDINARY_END_CALL;
+        //}
         break;
 
       case SIP_METHOD_BYE:
 #ifdef DEBUGG
         printf("--BYE\n");
 #endif
-        struct timespec ts;
-        assert(clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
-        time_t tt = MAX(ts.tv_sec - sip_data->start_time.tv_sec, 0);
-        strftime(strftime_res, sizeof(strftime_res), STRFTIME_FORMAT,
-            gmtime_r(&tt, &my_tm));
-
-        printf("end call [%s]:\n  caller: %s", strftime_res, sip_data->from);
-
-        MIDDLE_OUTPUT
-
-        printf("\n  duration: %s\n", strftime_res);
+        PRINT_ORDINARY_END_CALL;
         list_sip_remove(mem->calls, sip_data);
         break;
 
@@ -526,7 +539,12 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
         /* STATUS can not terminate session => we are not interested in it */
         if (sip_data->last_state != SIP_METHOD_INVITE) break;
 
-        if (! strncmp(status, "200", 3))
+        /* some info */
+        if (status[0] == '1') break;
+
+        //FIXME
+        //if (! strncmp(status, "200", 3))
+        if (status[0] == '2')
         {
           sip_data->last_state = SIP_METHOD_STATUS;
 
@@ -534,26 +552,22 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
               gmtime_r(&sip_data->start_time.tv_sec, &my_tm));
 
           printf("new call [%s]:\n  caller: %s", strftime_res, sip_data->from);
-
-          MIDDLE_OUTPUT
-
+          MIDDLE_OUTPUT;
           fputs("\n", stdout);
         }
         else
         {
-          printf("deny call [%s", (reason == NULL) ? "Unknown reason" : reason);
+          printf("denied call [%s", (reason == NULL) ? "Unknown reason" : reason);
 
           /* 486 600 ... => nothing; 488 => see Warning: */
           if (warning != NULL && ! strncmp(status, "488", 3))
             printf(" (%s)", warning);
 
           printf("]:\n  caller: %s", sip_data->from);
-
-          MIDDLE_OUTPUT
-
+          MIDDLE_OUTPUT;
           fputs("\n", stdout);
           list_sip_remove(mem->calls, sip_data);
-#ifdef DEBUGGG
+#ifdef DEBUGG
           if (! strncmp(status, "486", 3))
             printf("MUST BE|Busy Here\n");
           else if (! strncmp(status, "600", 3))

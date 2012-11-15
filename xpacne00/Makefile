@@ -6,7 +6,7 @@ EXE ?= sip_monitor
 SUB ?= xpacne00
 DOCNAME = manual
 CC ?= gcc
-CFLAGS ?= -std=c99 -W -Wall -Wextra -Werror -pedantic -D_POSIX_C_SOURCE=200112L -lpcap -lrt
+CFLAGS ?= -std=c99 -W -Wall -Wextra -Werror -pedantic -D_POSIX_C_SOURCE=200112L -lpcap -lrt -lm
 
 OBJ = $(SRC:.c=.o)
 
