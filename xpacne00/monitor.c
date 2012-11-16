@@ -290,7 +290,7 @@ void print_duration(double x)
 void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len)
 {
 #ifdef DEBUGG
-  fprintf(stderr, "--------------SIP data of size %d:\n", len);
+  printf("--------------SIP data of size %d:\n", len);
 #endif
 
   uint32_t l = 0;
@@ -330,7 +330,7 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
     }
 
 #ifdef DEBUG
-    fprintf(stderr, "__JOINED LINE|%s\n", mem->line);
+    printf("__JOINED LINE|%s\n", mem->line);
 #endif
 
     if (method == SIP_METHOD_UNKNOWN)
@@ -389,6 +389,27 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
          (method == SIP_METHOD_STATUS && warning != NULL))
        ) break;
   }
+
+#ifdef DEBUGG
+  switch (method)
+  {
+    case SIP_METHOD_UNKNOWN:
+      printf("--UNKNOWN\n");
+      break;
+    case SIP_METHOD_INVITE:
+      printf("--INVITE\n");
+      break;
+    case SIP_METHOD_CANCEL:
+      printf("--CANCEL\n");
+      break;
+    case SIP_METHOD_BYE:
+      printf("--BYE\n");
+      break;
+    /* STATUS */
+    default:
+      printf("--STATUS\n");
+  }
+#endif
 
   if (method == SIP_METHOD_INVITE)
   {
@@ -471,9 +492,6 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
 
       /* SIP_METHOD_STATUS (SIP_METHOD_UNKNOWN is impossible) */
       default:
-#ifdef DEBUGG
-        printf("--STATUS\n");
-#endif
         /* STATUS can not terminate session => we are not interested in it */
         if (sip_data->last_state != SIP_METHOD_INVITE) break;
 
@@ -534,7 +552,4 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
   if (warning    != NULL) free(warning);
 
   fflush(stdout);
-#ifdef DEBUG
-  fflush(stderr);
-#endif
 }
