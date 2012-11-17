@@ -1,7 +1,48 @@
 TADY VSE BEZ DIAKRITIKY !!!
 
-Readme obsahující krátký textový popis programu s případnými rozšířeními/omezeními, příklad spuštění a seznam odevzdaných souborů
+Program slouzi k monitorovani prichozich a odchozich hovoru iniciovanych skrze textovy protokolo SIP (Session Initiation Protocol) podle RFC\ 3261.
 
-Pokud v projektu nestihnete implementovat všechny požadované vlastnosti, je nutné veškerá omezení jasně uvést v dokumentaci a v souboru Readme.
+Program podporuje vsechny parametry zminene v zadani (-i -a -c -f -t -u). Testovani probihalo na systemech Linux 3.4.9 a FreeBSD 8.1 a byl k nemu pouzit VoIP telefon Ekiga.
+
+Ke kompilaci je krome bezne dostupnych knihoven zapotrebi libpcap (pro testovani na FreeBSD byla pouzita verze 1.1.1 a pod Linuxem verze 1.3.0). Verze pritomna na FreeBSD bohuzel v nekterych pripadech nevypisuje chybova hlaseni, takze se muze objevit neco na zpusob
+ERR:  em0
+namisto neceho obdobneho:
+ERR: Cannot access network device em0
+
+Spusteni viz. nize. Korektni ukonceni probehne po prijeti jednoho ze signalu SIGTERM, SIGHUP nebo SIGINT.
+
+$ sudo ./sip_monitor -i eth0
+new call [started on 17.11.2012 12:59:06]:
+  caller: sip:406284@sip.odorik.cz (Johnny English)
+  callee: sip:*081@sip.odorik.cz
+end call [started on 17.11.2012 12:59:06]:
+  caller: sip:406284@sip.odorik.cz (Johnny English)
+  callee: sip:*081@sip.odorik.cz
+  duration: 0 years 0 months 0 days 00:01:14
+
+$ sudo ./sip_monitor -c -i eth0 -u sip:406284@sip.odorik.cz
+end call [started on 17.11.2012 at 13:06:16]:
+  caller: sip:406284@sip.odorik.cz (Johnny English)
+  callee: sip:*081@sip.odorik.cz
+  duration: 0 years 0 months 0 days 00:00:04
+
+Dalsi priklady spusteni s ruznymi kombinacemi parametru a k nim prinalezejici vystupu lze nalezt v souboru manual.pdf .
+
+seznam odevzdanych souboru:
+  list_sip.h
+  manual.markdown
+  monitor.c
+  Makefile
+  args.c
+  monitor.h
+  list_str.h
+  common.h
+  main.c
+  manual.pdf
+  list_sip.c
+  tex_header.include
+  list_str.c
+  args.h
+  Readme
 
 vim: set wrap:

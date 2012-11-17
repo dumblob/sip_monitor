@@ -10,11 +10,6 @@ DOCNAME ?= manual
 CC = gcc
 __OS = $(shell uname)
 CFLAGS = -std=c99 -Wall -Wextra -Werror -pedantic $(shell [ "$(__OS)" == Linux ] && echo -D_POSIX_C_SOURCE=200112L)
-#__OS = $(shell uname)
-#ifeq ($(shell uname), Linux)
-#.if __OS == Linux
-#  CFLAGS += -D_POSIX_C_SOURCE=200112L
-#.endif
 
 all: $(EXE)
 
@@ -23,6 +18,18 @@ debug: all
 
 $(EXE): $(OBJ)
 	$(CC) $(CFLAGS) -lpcap -lrt -lm -o $@ $(OBJ)
+
+.c.o:
+	$(CC) $(CFLAGS) -O2 -c $<
+
+submit: doc clean
+	cd ../ && tar cvf $(SUB).tar $(SUB)/ --exclude $(SUB)/$(EXE)
+
+clean:
+	rm -f $(OBJ) $(SUB).tar
+
+distclean: clean
+	rm -f $(EXE) $(DOCNAME).pdf
 
 # article | report | book | memoir | letter | slides (transparent folie)
 doc:
@@ -37,17 +44,3 @@ doc:
 		-o $(DOCNAME).pdf $(DOCNAME).markdown
 #report article
 #		--template=template.latex
-
-submit: $(doc)
-	cd ../ && tar cvf $(SUB).tar \
-		$(SUB)/$(SRC) \
-		$(SUB)/$(HDR) \
-		$(SUB)/Makefile \
-		$(SUB)/Readme \
-		$(SUB)/$(DOCNAME).pdf
-
-clean:
-	rm -f $(OBJ) $(EXE) $(SUB).tar *~
-
-.c.o:
-	$(CC) $(CFLAGS) -O2 -c $<

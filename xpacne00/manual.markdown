@@ -27,6 +27,9 @@ Zachycuji napr. pouze BYE a uz me nezajima potvrzeni OK, protoze pri BYE je stej
 
 musim byt pod rootem (promiscuitous), atd.
 
+aplikace plne podporuje predepsane rozhrani:
+sip_monitor -i <rozhrani> [-a|-c] [-f <id>] [-t <id>] [-u <id>]
+
 na FreeBSD libpcap (1.1.1) nehlasi chybove hlasky v pripade problemu (pod Linuxem vsak ano - libpcap 1.3.0)
 
 ukazky
