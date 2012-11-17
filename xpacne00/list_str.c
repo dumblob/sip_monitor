@@ -25,6 +25,10 @@ void list_str_add(list_str_t *l, char *d)
 {
   assert(l != NULL);
 
+#ifdef DEBUGG
+  printf("list_str_add %s\n", d);
+#endif
+
   list_str_item_t *tmp;
 
   if ((tmp = malloc(sizeof(list_str_item_t))) == NULL) MALLOC_EXIT;

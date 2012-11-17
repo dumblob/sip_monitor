@@ -8,16 +8,24 @@
 
 #include <stdint.h>  /* HACK for pcap missing u_int u_short etc. ( */
 #define __USE_BSD    /*   needed under Linux)                      */
-#include <pcap.h>
+#include <pcap/pcap.h>
 
-#include <netdb.h>  /* in_addr */
+//#include <netdb.h>
+//#include <arpa/inet.h>  /* in_addr */
+
 #include <stdint.h>  /* uintXX_t */
+#include <netinet/in.h>  /* in_addr in6_addr */
 #include <regex.h>
 #include "args.h"
 #include "list_sip.h"
 
 #define RING_BUF_SIZE 8192  /* for 1 packet */
 #define READ_TIMEOUT 300  /* ms */
+
+/* not available on FreeBSD 8.2 stable */
+#ifndef PCAP_NETMASK_UNKNOWN
+#define PCAP_NETMASK_UNKNOWN 0xffffffff
+#endif
 
 #define IP_VERSION_4 4  /* content of the version field in IP header */
 #define IP_VERSION_6 6  /* - || - */

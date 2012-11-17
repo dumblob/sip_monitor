@@ -5,7 +5,7 @@
 
 #include <stdint.h>  /* HACK for pcap missing u_int u_short etc. ( */
 #define __USE_BSD    /*   needed under Linux)                      */
-#include <pcap.h>
+#include <pcap/pcap.h>
 
 #include <string.h>  /* memcpy */
 #include <arpa/inet.h>  /* ntohs */
@@ -166,36 +166,40 @@ void handle_packet(uint8_t *mem, const struct pcap_pkthdr *header,
       break;
 
     case IP_VERSION_6:
-      for (bool ipv6_hdr_found = true; ipv6_hdr_found; )
       {
-        switch (((ipv6_hdr_t *)packet)->nexthdr)
+        bool ipv6_hdr_found = true;
+
+        while (ipv6_hdr_found)
         {
-          case IPPROTO_TCP:
-            tcp_found = true;
-            ipv6_hdr_found = false;
-            break;
-          case IPPROTO_UDP:
-            tcp_found = false;
-            ipv6_hdr_found = false;
-            break;
-          case IPPROTO_IPV6:
-            break;
-          default:
-            return;
-        }
+          switch (((ipv6_hdr_t *)packet)->nexthdr)
+          {
+            case IPPROTO_TCP:
+              tcp_found = true;
+              ipv6_hdr_found = false;
+              break;
+            case IPPROTO_UDP:
+              tcp_found = false;
+              ipv6_hdr_found = false;
+              break;
+            case IPPROTO_IPV6:
+              break;
+            default:
+              return;
+          }
 
 #ifdef DEBUG
-        cur_len -= sizeof(ipv6_hdr_t);
-        fprintf(stderr, "cur_len       %d\n"
-            "ipv6 data len %d (MUST be the same as cur_len!)\n",
-            cur_len,
-            ntohs(((ipv6_hdr_t *)packet)->payloadlen));
+          cur_len -= sizeof(ipv6_hdr_t);
+          fprintf(stderr, "cur_len       %d\n"
+              "ipv6 data len %d (MUST be the same as cur_len!)\n",
+              cur_len,
+              ntohs(((ipv6_hdr_t *)packet)->payloadlen));
 #endif
-         packet  += sizeof(ipv6_hdr_t);
-        CHECK_PACKET_LEN;
-      }
+          packet  += sizeof(ipv6_hdr_t);
+          CHECK_PACKET_LEN;
+        }
 
-      break;
+        break;
+      }
 
     default:
       return;
@@ -255,25 +259,38 @@ void print_regex_parts(char *str, regmatch_t *pmatch, int size)
 }
 #endif
 
+/*                        (60.0 * 60.0 * 24.0 * (365.25 / 12.0) * 12.0) */
+#define SECONDS_IN_YEAR   (60.0 * 60.0 * 24.0 * 365.25)
+#define SECONDS_IN_MONTH  (60.0 * 60.0 * 24.0 * (365.25 / 12.0))
+#define SECONDS_IN_DAY    (60.0 * 60.0 * 24.0)
+#define SECONDS_IN_HOUR   (60.0 * 60.0)
+#define SECONDS_IN_MINUTE (60.0)
+
 void print_duration(double x)
 {
-  printf("\n  duration: %dyears %dmonths %ddays %02d:%02d:%02d%s\n",
-      (int)trunc(x / 60.0 / 60.0 / 24.0 / (365.25 / 12.0) / 12.0),
-      (int)trunc(x / 60.0 / 60.0 / 24.0 / (365.25 / 12.0)),
-      (int)trunc(x / 60.0 / 60.0 / 24.0),
-      (int)trunc(x / 60.0 / 60.0),
-      (int)trunc(x / 60.0),
-      (int)x,
-      ((int)x == 0) ? " (approaching zero)" : "");
+  double Y = trunc(x / SECONDS_IN_YEAR  ); x -= Y * SECONDS_IN_YEAR;
+  double M = trunc(x / SECONDS_IN_MONTH ); x -= M * SECONDS_IN_MONTH;
+  double D = trunc(x / SECONDS_IN_DAY   ); x -= D * SECONDS_IN_DAY;
+  double h = trunc(x / SECONDS_IN_HOUR  ); x -= h * SECONDS_IN_HOUR;
+  double m = trunc(x / SECONDS_IN_MINUTE); x -= m * SECONDS_IN_MINUTE;
+
+  printf("\n  duration: %d years %d months %d days %02d:%02d:%02d%s\n",
+      (int)Y, (int)M, (int)D, (int)h, (int)m, (int)x,
+      ((int)Y == 0 &&
+       (int)M == 0 &&
+       (int)D == 0 &&
+       (int)h == 0 &&
+       (int)m == 0 &&
+       (int)x == 0) ? " (approaching zero)" : "");
 }
 
 #define MIDDLE_OUTPUT \
   do { \
-  if (sip_data->from_label[0] != '\0') \
-    printf(" (%s)", sip_data->from_label); \
-  printf("\n  callee: %s", sip_data->to); \
-  if (sip_data->to_label[0] != '\0') \
-    printf(" (%s)", sip_data->to_label); \
+    if (sip_data->from_label[0] != '\0') \
+      printf(" (%s)", sip_data->from_label); \
+    printf("\n  callee: %s", sip_data->to); \
+    if (sip_data->to_label[0] != '\0') \
+      printf(" (%s)", sip_data->to_label); \
   } while (0)
 
 #define save_string_from_regex(tmp, var, index) \
@@ -307,8 +324,8 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
   char *warning = NULL;
   list_sip_data_t *sip_data = NULL;
   int tmp;
-#define STRFTIME_FORMAT "%d.%m.%Y %H:%M:%S"
-  char strftime_res[] = "14.11.2012 19:58:29";
+#define STRFTIME_FORMAT "started on %d.%m.%Y at %H:%M:%S"
+  char strftime_res[] = "started on 14.11.2012 at 19:58:29";
 
   /* loop through joined mem->lines */
   while (l + offset < len)
@@ -409,21 +426,30 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
     default:
       printf("--STATUS\n");
   }
+
+  printf("status     %sXXX\n", status    );
+  printf("reason     %sXXX\n", reason    );
+  printf("from_label %sXXX\n", from_label);
+  printf("from_addr  %sXXX\n", from_addr );
+  printf("to_label   %sXXX\n", to_label  );
+  printf("to_addr    %sXXX\n", to_addr   );
+  printf("call_id    %sXXX\n", call_id   );
 #endif
 
   if (method == SIP_METHOD_INVITE)
   {
     if ((sip_data = list_sip_item_present(mem->calls, call_id)) == NULL)
     {
-      if ((mem->args->f == NULL ||
-            list_str_item_present(mem->args->f, from_addr) != NULL) ||
-          (mem->args->t == NULL ||
-            list_str_item_present(mem->args->t, to_addr) != NULL))
+      if ((mem->args->f == NULL && mem->args->t == NULL) ||
+          (mem->args->f != NULL &&
+           (list_str_item_present(mem->args->f, from_addr) != NULL)) ||
+          (mem->args->t != NULL &&
+           (list_str_item_present(mem->args->t, to_addr  ) != NULL)))
       {
         if ((sip_data = malloc(sizeof(list_sip_data_t))) == NULL) MALLOC_EXIT;
 
-        assert(clock_gettime(CLOCK_REALTIME, &sip_data->start_time) == 0);
-        assert(clock_gettime(CLOCK_MONOTONIC, &sip_data->start_time_monotonic) == 0);
+        memset(&sip_data->start_time,           0, sizeof(struct timespec));
+        memset(&sip_data->start_time_monotonic, 0, sizeof(struct timespec));
         sip_data->last_state = method;
         sip_data->from       = from_addr;  from_addr  = NULL;
         sip_data->from_label = from_label; from_label = NULL;
@@ -437,8 +463,6 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
     /* handle re-INVITE -> update from & to */
     else
     {
-      sip_data->last_state = method;
-
       free(sip_data->from);
       sip_data->from = from_addr;
       from_addr = NULL;
@@ -478,6 +502,9 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
         break;
 
       case SIP_METHOD_BYE:
+        /* we can terminate only already established sessions/dialogs */
+        if (sip_data->last_state != SIP_METHOD_STATUS) break;
+
         strftime(strftime_res, sizeof(strftime_res), STRFTIME_FORMAT,
             gmtime_r(&sip_data->start_time.tv_sec, &my_tm));
         printf("end call [%s]:\n  caller: %s", strftime_res, sip_data->from);
@@ -502,6 +529,8 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
         if (status[0] == '2')
         {
           sip_data->last_state = SIP_METHOD_STATUS;
+          assert(clock_gettime(CLOCK_REALTIME, &sip_data->start_time) == 0);
+          assert(clock_gettime(CLOCK_MONOTONIC, &sip_data->start_time_monotonic) == 0);
 
           if (! mem->args->c)
           {
@@ -532,15 +561,6 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
           list_sip_remove(mem->calls, sip_data);
         }
     }
-#ifdef DEBUGG
-    printf("status     %sXXX\n", status    );
-    printf("reason     %sXXX\n", reason    );
-    printf("from_label %sXXX\n", from_label);
-    printf("from_addr  %sXXX\n", from_addr );
-    printf("to_label   %sXXX\n", to_label  );
-    printf("to_addr    %sXXX\n", to_addr   );
-    printf("call_id    %sXXX\n", call_id   );
-#endif
   }
 
   if (reason     != NULL) free(reason);

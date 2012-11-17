@@ -6,9 +6,10 @@
 #ifndef LOCAL_COMMON_H
 #define LOCAL_COMMON_H
 
+//#include <sys/types.h>  /* HACK for pcap missing u_int u_short etc. ( */
 #include <stdint.h>  /* HACK for pcap missing u_int u_short etc. ( */
 #define __USE_BSD    /*   needed under Linux)                      */
-#include <pcap.h>
+#include <pcap/pcap.h>
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,0 +1,124 @@
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 1308:
+--INVITE
+--------------SIP data of size 1299:
+--INVITE
+--------------SIP data of size 517:
+--STATUS
+status     407XXX
+reason     Proxy Authentication RequiredXXX
+from_label Johnny EnglishXXX
+from_addr  sip:406284@sip.odorik.czXXX
+to_label   XXX
+to_addr    sip:*081@sip.odorik.czXXX
+call_id    bce586fa-1e2f-e211-940e-002186a3cc39@T500XXX
+--------------SIP data of size 400:
+--------------SIP data of size 1472:
+--INVITE
+--------------SIP data of size 340:
+--STATUS
+status     100XXX
+reason     TryingXXX
+from_label Johnny EnglishXXX
+from_addr  sip:406284@sip.odorik.czXXX
+to_label   XXX
+to_addr    sip:*081@sip.odorik.czXXX
+call_id    bce586fa-1e2f-e211-940e-002186a3cc39@T500XXX
+--------------SIP data of size 1299:
+--INVITE
+--------------SIP data of size 962:
+--STATUS
+new call [17.11.2012 12:21:27]:
+  caller: sip:406284@sip.odorik.cz (Johnny English)
+  callee: sip:*081@sip.odorik.cz
+status     200XXX
+reason     OKXXX
+from_label Johnny EnglishXXX
+from_addr  sip:406284@sip.odorik.czXXX
+to_label   XXX
+to_addr    sip:*081@sip.odorik.czXXX
+call_id    bce586fa-1e2f-e211-940e-002186a3cc39@T500XXX
+--------------SIP data of size 361:
+--CANCEL
+status     200XXX
+reason     (null)XXX
+from_label Johnny EnglishXXX
+from_addr  sip:406284@sip.odorik.czXXX
+to_label   (null)XXX
+to_addr    (null)XXX
+call_id    bce586fa-1e2f-e211-940e-002186a3cc39@T500XXX
+--------------SIP data of size 841:
+--------------SIP data of size 1297:
+--INVITE
+--------------SIP data of size 367:
+--STATUS
+status     100XXX
+reason     TryingXXX
+from_label Johnny EnglishXXX
+from_addr  sip:406284@sip.odorik.czXXX
+to_label   XXX
+to_addr    sip:*081@sip.odorik.czXXX
+call_id    bce586fa-1e2f-e211-940e-002186a3cc39@T500XXX
+--------------SIP data of size 796:
+--STATUS
+new call [17.11.2012 12:21:27]:
+  caller: sip:406284@sip.odorik.cz (Johnny English)
+  callee: sip:*081@sip.odorik.cz
+status     200XXX
+reason     OKXXX
+from_label Johnny EnglishXXX
+from_addr  sip:406284@sip.odorik.czXXX
+to_label   XXX
+to_addr    sip:*081@sip.odorik.czXXX
+call_id    bce586fa-1e2f-e211-940e-002186a3cc39@T500XXX
+--------------SIP data of size 841:
+--------------SIP data of size 361:
+--CANCEL
+status     200XXX
+reason     (null)XXX
+from_label Johnny EnglishXXX
+from_addr  sip:406284@sip.odorik.czXXX
+to_label   (null)XXX
+to_addr    (null)XXX
+call_id    bce586fa-1e2f-e211-940e-002186a3cc39@T500XXX
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 866:
+--BYE
+end call [17.11.2012 12:21:27]:
+  caller: sip:406284@sip.odorik.cz (Johnny English)
+  callee: sip:*081@sip.odorik.cz
+  duration: 0 years 0 months 0 days 00:01:04
+status     200XXX
+reason     (null)XXX
+from_label Johnny EnglishXXX
+from_addr  sip:406284@sip.odorik.czXXX
+to_label   (null)XXX
+to_addr    (null)XXX
+call_id    bce586fa-1e2f-e211-940e-002186a3cc39@T500XXX
+--------------SIP data of size 471:
+--STATUS
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 2:
+--------------SIP data of size 975:
+--------------SIP data of size 439:
+--STATUS

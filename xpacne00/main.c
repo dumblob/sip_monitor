@@ -5,7 +5,7 @@
 
 #include <stdint.h>  /* HACK for pcap missing u_int u_short etc. ( */
 #define __USE_BSD    /*   needed under Linux)                      */
-#include <pcap.h>
+#include <pcap/pcap.h>
 
 #include <signal.h>
 #include "args.h"

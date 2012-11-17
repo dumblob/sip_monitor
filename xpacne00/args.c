@@ -11,8 +11,6 @@
 #include "list_str.h"
 #include "args.h"
 
-//FIXME testovat uplne libovolne poradi argumentu
-
 /*
  * promiskuitni mod -> vyfiltruje pouze SIP zpravy
  * spusteni bez parametru vypise napovedu + muj login + exit(0)
@@ -46,6 +44,10 @@
  *     POZOR muze byt zadano i vicekrat (i to same vicekrat)
  *           lze kombinovat s cimkoliv (i -t, i -f)
  */
+
+extern int getopt(int, char * const *, const char *);
+extern char *optarg;
+extern int optind, opterr, optopt;
 
 void handle_args(int argc, char *argv[], args_s *args)
 {

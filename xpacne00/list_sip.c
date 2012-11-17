@@ -6,6 +6,9 @@
 #include <stdlib.h>  /* malloc */
 #include <string.h>
 #include <assert.h>
+#ifdef DEBUGG
+#include <stdio.h>
+#endif
 #include "common.h"
 #include "list_sip.h"
 #include "monitor.h"
@@ -25,6 +28,10 @@ list_sip_t *list_sip_init (void)
 void list_sip_add(list_sip_t *l, list_sip_data_t *d)
 {
   assert(l != NULL);
+
+#ifdef DEBUGG
+  printf("list_sip_add %s\n", d->call_id);
+#endif
 
   list_sip_item_t *tmp;
 
@@ -48,6 +55,10 @@ void list_sip_add(list_sip_t *l, list_sip_data_t *d)
 void list_sip_remove(list_sip_t *l, list_sip_data_t *item)
 {
   assert(l != NULL);
+
+#ifdef DEBUGG
+  printf("list_sip_remove %s\n", item->call_id);
+#endif
 
   list_sip_item_t *tmp = l->head;
   list_sip_item_t *prev = NULL;
