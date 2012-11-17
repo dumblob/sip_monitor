@@ -9,12 +9,6 @@
 #include <stdbool.h>
 #include "list_str.h"
 
-//FIXME
-//extern char *optarg;
-//extern int optind;
-//extern int opterr;
-//int getopt(int, char **, const char *);
-
 typedef struct {
   bool implicit;  // no behaviour args given
   char *i;        // interface

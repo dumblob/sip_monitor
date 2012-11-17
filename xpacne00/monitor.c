@@ -353,6 +353,7 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
     if (method == SIP_METHOD_UNKNOWN)
     {
       /* we are interested only in the following methods */
+
       if      (! regexec(&mem->sip_invite, mem->line, MAX_ERE_LEN, mem->pmatch, 0))
       {
         method = SIP_METHOD_INVITE;
@@ -506,7 +507,7 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
         if (sip_data->last_state != SIP_METHOD_STATUS) break;
 
         strftime(strftime_res, sizeof(strftime_res), STRFTIME_FORMAT,
-            gmtime_r(&sip_data->start_time.tv_sec, &my_tm));
+            localtime_r(&sip_data->start_time.tv_sec, &my_tm));
         printf("end call [%s]:\n  caller: %s", strftime_res, sip_data->from);
         MIDDLE_OUTPUT;
         struct timespec my_ts;
@@ -535,7 +536,7 @@ void handle_sip_data(payload_mem_t *mem, const uint8_t *data, const uint32_t len
           if (! mem->args->c)
           {
             strftime(strftime_res, sizeof(strftime_res), STRFTIME_FORMAT,
-                gmtime_r(&sip_data->start_time.tv_sec, &my_tm));
+                localtime_r(&sip_data->start_time.tv_sec, &my_tm));
 
             printf("new call [%s]:\n  caller: %s", strftime_res, sip_data->from);
             MIDDLE_OUTPUT;

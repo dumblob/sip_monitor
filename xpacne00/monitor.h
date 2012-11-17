@@ -22,7 +22,7 @@
 #define RING_BUF_SIZE 8192  /* for 1 packet */
 #define READ_TIMEOUT 300  /* ms */
 
-/* not available on FreeBSD 8.2 stable */
+/* not available on FreeBSD 8.1 stable */
 #ifndef PCAP_NETMASK_UNKNOWN
 #define PCAP_NETMASK_UNKNOWN 0xffffffff
 #endif

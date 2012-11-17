@@ -9,9 +9,9 @@ ERR:  em0
 namisto neceho obdobneho:
 ERR: Cannot access network device em0
 
-Spusteni viz. nize. Korektni ukonceni probehne po prijeti jednoho ze signalu SIGTERM, SIGHUP nebo SIGINT.
+Spusteni je mozne pouze s pravy uzivatele root. Ukazky viz. nize. Korektni ukonceni probehne po prijeti jednoho ze signalu SIGTERM, SIGHUP nebo SIGINT.
 
-$ sudo ./sip_monitor -i eth0
+# ./sip_monitor -i eth0
 new call [started on 17.11.2012 12:59:06]:
   caller: sip:406284@sip.odorik.cz (Johnny English)
   callee: sip:*081@sip.odorik.cz
@@ -20,7 +20,7 @@ end call [started on 17.11.2012 12:59:06]:
   callee: sip:*081@sip.odorik.cz
   duration: 0 years 0 months 0 days 00:01:14
 
-$ sudo ./sip_monitor -c -i eth0 -u sip:406284@sip.odorik.cz
+# ./sip_monitor -c -i eth0 -u sip:406284@sip.odorik.cz
 end call [started on 17.11.2012 at 13:06:16]:
   caller: sip:406284@sip.odorik.cz (Johnny English)
   callee: sip:*081@sip.odorik.cz
